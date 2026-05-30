@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Avatar — Admin Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:ital,wght@0,400;0,500;0,600;0,700;1,500&family=JetBrains+Mono:wght@400;500&family=Newsreader:ital,opsz,wght@0,18..72,400;0,18..72,500;0,18..72,600;1,18..72,400;1,18..72,500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../tokens.css">
+<link rel="stylesheet" href="../components.css">
+<style>
+  html, body { height: 100%; }
+  body { display: grid; grid-template-rows: var(--header-h) 1fr; overflow: hidden; }
+
+  /* ---- App bar ---- */
+  .appbar { display: flex; align-items: center; justify-content: space-between; gap: var(--space-4);
+    padding: 0 var(--space-5); border-bottom: 1px solid var(--border); background: var(--surface-1); z-index: 5; }
+  .brand { display: flex; align-items: center; gap: var(--space-3); }
+  .brand-mark { width: 34px; height: 34px; flex: none; border-radius: var(--radius-md);
+    background: var(--surface-sunken); border: 1px solid var(--border-strong);
+    display: flex; align-items: center; justify-content: center; }
+  .brand-name { font-family: var(--font-display); font-weight: 600; font-size: 1.3rem; line-height: 1; }
+  .admin-pill { font-family: var(--font-mono); font-size: var(--text-2xs); letter-spacing: var(--tracking-caps);
+    text-transform: uppercase; color: var(--blue-ink); background: var(--blue-soft);
+    border: 1px solid var(--blue-line); border-radius: var(--radius-sm); padding: 3px 7px; }
+  .appbar-right { display: flex; align-items: center; gap: var(--space-3); }
+  .secure-note { display: inline-flex; align-items: center; gap: 6px; font-size: var(--text-xs);
+    color: var(--text-faint); }
+  .secure-note .icon { color: var(--positive); }
+  .icon-btn { width: 36px; height: 36px; border-radius: var(--radius-md); border: 1px solid var(--border);
+    background: var(--surface-1); color: var(--text-muted); display: inline-flex; align-items: center;
+    justify-content: center; cursor: pointer; }
+  .icon-btn:hover { background: var(--surface-2); color: var(--text); }
+  .divider-v { width: 1px; height: 24px; background: var(--border); }
+  .owner-chip { display: flex; align-items: center; gap: var(--space-2); padding: 4px 4px 4px 10px;
+    border: 1px solid var(--border); border-radius: var(--radius-pill); }
+  .owner-chip span { font-size: var(--text-sm); color: var(--text-muted); font-weight: 600; }
+
+  /* ---- Layout ---- */
+  .workspace { display: grid; grid-template-columns: var(--sidebar-w) 1fr; min-height: 0; }
+
+  /* ---- Sidebar ---- */
+  .sidebar { display: flex; flex-direction: column; min-height: 0; border-right: 1px solid var(--border);
+    background: var(--surface-1); }
+  .sidebar-head { padding: var(--space-4) var(--space-4) var(--space-3); display: flex;
+    flex-direction: column; gap: var(--space-3); border-bottom: 1px solid var(--border); }
+  .sidebar-title { display: flex; align-items: center; justify-content: space-between; }
+  .sidebar-title h2 { margin: 0; font-family: var(--font-display); font-weight: 600; font-size: var(--text-lg);
+    display: flex; align-items: center; gap: var(--space-2); }
+  .count-badge { font-family: var(--font-mono); font-size: var(--text-2xs); color: var(--text-muted);
+    background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius-pill); padding: 2px 8px; }
+  .search { display: flex; align-items: center; gap: var(--space-2); background: var(--surface-2);
+    border: 1px solid var(--border); border-radius: var(--radius-md); padding: 0 var(--space-3); height: 36px; }
+  .search input { border: none; background: none; outline: none; color: var(--text); font-family: var(--font-sans);
+    font-size: var(--text-sm); width: 100%; }
+  .search .icon { color: var(--text-faint); }
+  .filter-row { display: flex; gap: var(--space-2); }
+  .filter-chip { font-family: var(--font-mono); font-size: var(--text-2xs); letter-spacing: var(--tracking-wide);
+    text-transform: uppercase; padding: 4px 9px; border-radius: var(--radius-pill); cursor: pointer;
+    border: 1px solid var(--border); background: var(--surface-2); color: var(--text-faint); }
+  .filter-chip.is-on { background: var(--surface-3); color: var(--text); border-color: var(--border-strong); }
+  .filter-chip .dot-y { display:inline-block; width:6px; height:6px; border-radius:50%; background:var(--yellow-strong); margin-right:4px; vertical-align: middle; }
+
+  .convo-list { flex: 1; min-height: 0; overflow-y: auto; }
+
+  /* avatar in list */
+  .convo-item .avatar-initials { width: 38px; height: 38px; }
+
+  /* ---- Main panel ---- */
+  .main { display: flex; flex-direction: column; min-height: 0; background: var(--surface-0); position: relative; }
+  .thread-head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-4);
+    padding: var(--space-3) var(--space-5); border-bottom: 1px solid var(--border); background: var(--surface-1); }
+  .thread-id { display: flex; align-items: center; gap: var(--space-3); }
+  .thread-id .meta { display: flex; flex-direction: column; gap: 2px; }
+  .thread-id .meta .name { font-weight: 700; font-size: var(--text-base); }
+  .thread-id .meta .sub { font-family: var(--font-mono); font-size: var(--text-2xs); color: var(--text-faint); }
+  .thread-actions { display: flex; align-items: center; gap: var(--space-2); }
+  .attn-flag { display: inline-flex; align-items: center; gap: 6px; font-size: var(--text-xs); font-weight: 600;
+    color: var(--yellow-ink); background: var(--yellow-soft); border: 1px solid var(--yellow-line);
+    border-radius: var(--radius-pill); padding: 5px 11px; }
+  .attn-flag .icon { width: 14px; height: 14px; color: var(--yellow-strong); }
+
+  .thread { flex: 1; min-height: 0; overflow-y: auto; }
+  .thread-inner { max-width: 820px; margin: 0 auto; padding: var(--space-6) var(--space-6) var(--space-4);
+    display: flex; flex-direction: column; gap: var(--space-5); }
+
+  /* admin composer */
+  .admin-composer-dock { flex: none; padding: var(--space-3) var(--space-6) var(--space-5);
+    border-top: 1px solid var(--border); background: var(--surface-1); }
+  .admin-composer-wrap { max-width: 820px; margin: 0 auto; display: flex; flex-direction: column; gap: var(--space-2); }
+  .posting-as { display: flex; align-items: center; gap: var(--space-2); font-size: var(--text-xs);
+    color: var(--text-faint); }
+  .posting-as .avatar { width: 22px; height: 22px; }
+  .posting-as strong { color: var(--text-muted); font-weight: 600; }
+  .kbd-hints { display: flex; align-items: center; gap: var(--space-4); margin-top: var(--space-1);
+    font-size: var(--text-xs); color: var(--text-faint); flex-wrap: wrap; }
+  .kbd-hints .h { display: inline-flex; align-items: center; gap: 6px; }
+</style>
+</head>
+<body>
+
+<!-- ICON SPRITE -->
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none" aria-hidden="true"><defs><style>
+  symbol{fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+  symbol .fill{fill:currentColor;stroke:none}</style></defs>
+  <symbol id="i-send" viewBox="0 0 24 24"><path d="M12 20V5"/><path d="M6 11l6-6 6 6"/></symbol>
+  <symbol id="i-inbox" viewBox="0 0 24 24"><path d="M4 13.2l2.4-7h11.2L20 13.2v4.6a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1z"/><path d="M4 13.2h4l1.1 2.1h5.8L16 13.2h4"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="10.8" cy="10.8" r="6.2"/><path d="M15.4 15.4L20 20"/></symbol>
+  <symbol id="i-spark" viewBox="0 0 24 24"><path d="M12 3.2l1.9 6.5 6.5 1.9-6.5 1.9L12 20l-1.9-6.5L3.6 11.6l6.5-1.9z"/></symbol>
+  <symbol id="i-bell" viewBox="0 0 24 24"><path d="M6.2 9.4a5.8 5.8 0 0 1 11.6 0c0 4.7 1.9 5.9 1.9 5.9H4.3s1.9-1.2 1.9-5.9z"/><path d="M10.2 19.2a2 2 0 0 0 3.6 0"/></symbol>
+  <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2.6v2.4M12 19v2.4M2.6 12h2.4M19 12h2.4M5.3 5.3l1.7 1.7M17 17l1.7 1.7M18.7 5.3L17 7M7 17l-1.7 1.7"/></symbol>
+  <symbol id="i-moon" viewBox="0 0 24 24"><path d="M20 14.2A8 8 0 0 1 9.8 4 8 8 0 1 0 20 14.2z"/></symbol>
+  <symbol id="i-tool" viewBox="0 0 24 24"><rect x="5" y="6" width="14" height="12" rx="2"/><path d="M8.5 10.5l2 1.5-2 1.5"/><path d="M12.5 14h3"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.5l4.2 4.3L19 7"/></symbol>
+  <symbol id="i-check2" viewBox="0 0 24 24"><path d="M3.5 12.6l3.8 3.9L15.4 8"/><path d="M11 16l.4.5L20 8"/></symbol>
+  <symbol id="i-mail" viewBox="0 0 24 24"><rect x="3.5" y="5.5" width="17" height="13" rx="2"/><path d="M4 7l8 5.5L20 7"/></symbol>
+  <symbol id="i-chev-up" viewBox="0 0 24 24"><path d="M6 14.5l6-6 6 6"/></symbol>
+  <symbol id="i-chev-down" viewBox="0 0 24 24"><path d="M6 9.5l6 6 6-6"/></symbol>
+  <symbol id="i-enter" viewBox="0 0 24 24"><path d="M20 6.5v4a3 3 0 0 1-3 3H5"/><path d="M9 9.5l-4 4 4 4"/></symbol>
+  <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3.2l7 2.6v5.2c0 4.6-3.1 7.6-7 8.8-3.9-1.2-7-4.2-7-8.8V5.8z"/><path d="M9 12l2 2 4-4"/></symbol>
+  <symbol id="i-live" viewBox="0 0 24 24"><circle cx="12" cy="12" r="2.2" class="fill"/><path d="M7.8 7.8a6 6 0 0 0 0 8.4M16.2 16.2a6 6 0 0 0 0-8.4"/><path d="M5 5a9.5 9.5 0 0 0 0 14M19 19a9.5 9.5 0 0 0 0-14"/></symbol>
+  <symbol id="i-sliders" viewBox="0 0 24 24"><path d="M5 8h7M16 8h3M5 16h3M12 16h7"/><circle cx="14" cy="8" r="2"/><circle cx="10" cy="16" r="2"/></symbol>
+</svg>
+
+<header class="appbar">
+  <div class="brand">
+    <span class="brand-mark" aria-hidden="true">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+        <circle cx="9.5" cy="13" r="5" fill="var(--blue-strong)"/>
+        <circle cx="15.5" cy="13" r="5" stroke="var(--blue-strong)" stroke-width="1.6"/>
+        <circle cx="15.5" cy="13" r="1.4" fill="var(--yellow-strong)"/>
+      </svg>
+    </span>
+    <div class="brand-name">Avatar</div>
+    <span class="admin-pill">Admin</span>
+  </div>
+  <div class="appbar-right">
+    <span class="secure-note"><svg class="icon icon--sm"><use href="#i-shield"/></svg> Secure session</span>
+    <span class="divider-v"></span>
+    <button class="icon-btn" id="themeToggle" title="Toggle light / dark">
+      <svg class="icon icon--sm theme-moon"><use href="#i-moon"/></svg>
+      <svg class="icon icon--sm theme-sun" style="display:none"><use href="#i-sun"/></svg>
+    </button>
+    <div class="owner-chip">
+      <span>You</span>
+      <span class="avatar avatar-human" style="width:28px;height:28px;background-image:url('../assets/avatar-human.png')"></span>
+    </div>
+  </div>
+</header>
+
+<div class="workspace">
+  <!-- Sidebar / inbox -->
+  <aside class="sidebar">
+    <div class="sidebar-head">
+      <div class="sidebar-title">
+        <h2><svg class="icon"><use href="#i-inbox"/></svg> Conversations</h2>
+        <span class="count-badge">24</span>
+      </div>
+      <div class="search">
+        <svg class="icon icon--sm"><use href="#i-search"/></svg>
+        <input type="text" placeholder="Search visitors & messages…">
+      </div>
+      <div class="filter-row">
+        <span class="filter-chip is-on">All</span>
+        <span class="filter-chip"><span class="dot-y"></span>Needs you · 2</span>
+        <span class="filter-chip">Unread · 5</span>
+      </div>
+    </div>
+    <div class="convo-list scroll">
+
+      <!-- active + attention -->
+      <div class="convo-item is-active is-unread is-attention">
+        <span class="avatar-initials">JM</span>
+        <div class="convo-main">
+          <div class="convo-top"><span class="convo-name">Jordan M.</span></div>
+          <div class="convo-preview">jordan.m@example.com — thanks!</div>
+        </div>
+        <div class="convo-side">
+          <span class="msg-time">2:45</span>
+          <span class="badge badge--attention"><svg class="icon" style="width:11px;height:11px"><use href="#i-spark"/></svg> Needs you</span>
+        </div>
+      </div>
+
+      <!-- attention, unread -->
+      <div class="convo-item is-unread is-attention">
+        <span class="avatar-initials">PR</span>
+        <div class="convo-main">
+          <div class="convo-top"><span class="convo-name">Priya</span></div>
+          <div class="convo-preview">Could someone confirm enterprise licensing for…</div>
+        </div>
+        <div class="convo-side">
+          <span class="msg-time">1:12</span>
+          <span class="badge badge--dot is-attention"></span>
+        </div>
+      </div>
+
+      <!-- unread -->
+      <div class="convo-item is-unread">
+        <span class="avatar-initials">SK</span>
+        <div class="convo-main">
+          <div class="convo-top"><span class="convo-name">S.K.</span></div>
+          <div class="convo-preview">Do you cover MCP in any of the courses?</div>
+        </div>
+        <div class="convo-side">
+          <span class="msg-time">12:48</span>
+          <span class="badge badge--dot"></span>
+        </div>
+      </div>
+
+      <!-- read -->
+      <div class="convo-item">
+        <span class="avatar-initials">TR</span>
+        <div class="convo-main">
+          <div class="convo-top"><span class="convo-name">T. Rivera</span></div>
+          <div class="convo-preview">That clears it up — appreciate it!</div>
+        </div>
+        <div class="convo-side">
+          <span class="msg-time">11:30</span>
+          <svg class="icon icon--sm" style="color:var(--positive)"><use href="#i-check2"/></svg>
+        </div>
+      </div>
+
+      <!-- read -->
+      <div class="convo-item">
+        <span class="avatar-initials">AL</span>
+        <div class="convo-main">
+          <div class="convo-top"><span class="convo-name">Alex L.</span></div>
+          <div class="convo-preview">Which course should a data scientist start with?</div>
+        </div>
+        <div class="convo-side">
+          <span class="msg-time">Yest</span>
+          <svg class="icon icon--sm" style="color:var(--positive)"><use href="#i-check2"/></svg>
+        </div>
+      </div>
+
+      <div class="convo-item">
+        <span class="avatar-initials">MN</span>
+        <div class="convo-main">
+          <div class="convo-top"><span class="convo-name">M.N.</span></div>
+          <div class="convo-preview">Loved the agents course. Any advanced follow-up?</div>
+        </div>
+        <div class="convo-side">
+          <span class="msg-time">Yest</span>
+          <svg class="icon icon--sm" style="color:var(--positive)"><use href="#i-check2"/></svg>
+        </div>
+      </div>
+
+      <div class="convo-item">
+        <span class="avatar-initials">DV</span>
+        <div class="convo-main">
+          <div class="convo-top"><span class="convo-name">Dani V.</span></div>
+          <div class="convo-preview">Is there a certificate at the end?</div>
+        </div>
+        <div class="convo-side">
+          <span class="msg-time">Mon</span>
+          <svg class="icon icon--sm" style="color:var(--positive)"><use href="#i-check2"/></svg>
+        </div>
+      </div>
+
+    </div>
+  </aside>
+
+  <!-- Main thread -->
+  <section class="main">
+    <div class="thread-head">
+      <div class="thread-id">
+        <span class="avatar-initials">JM</span>
+        <div class="meta">
+          <span class="name">Jordan M.</span>
+          <span class="sub">conv_b3f2a9 · started 2:41 PM · 9 messages</span>
+        </div>
+      </div>
+      <div class="thread-actions">
+        <span class="attn-flag"><svg class="icon"><use href="#i-spark"/></svg> Avatar asked for you</span>
+        <button class="btn btn--secondary btn--sm"><svg class="icon icon--sm"><use href="#i-check"/></svg> Mark resolved</button>
+      </div>
+    </div>
+
+    <div class="thread scroll" id="thread">
+      <div class="thread-inner">
+
+        <div class="day-sep" style="display:flex;align-items:center;gap:16px;margin:2px 0">
+          <span class="eyebrow">Today</span>
+        </div>
+
+        <!-- visitor -->
+        <div class="msg msg--visitor">
+          <span class="avatar-initials">JM</span>
+          <div class="msg-body">
+            <div class="msg-meta"><span class="msg-time">2:41 PM</span></div>
+            <div class="bubble"><p>Which of your courses actually covers RAG? Trying to figure out where to start.</p></div>
+          </div>
+        </div>
+
+        <!-- avatar -->
+        <div class="msg msg--avatar">
+          <div class="avatar avatar-twin" style="background-image:url('../assets/avatar-robot-round.png')"></div>
+          <div class="msg-body">
+            <div class="msg-meta"><span class="msg-name">Avatar</span><span class="msg-time">2:41 PM</span></div>
+            <div class="tool-status is-done"><svg class="icon"><use href="#i-check"/></svg> faq_tool · curriculum</div>
+            <div class="bubble"><p>Great question — the cleanest path is the <strong>Agentic AI Engineering</strong> course. Ed also wrote a full <a href="#">recommended curriculum</a>.</p></div>
+          </div>
+        </div>
+
+        <!-- visitor -->
+        <div class="msg msg--visitor">
+          <span class="avatar-initials">JM</span>
+          <div class="msg-body">
+            <div class="msg-meta"><span class="msg-time">2:44 PM</span></div>
+            <div class="bubble"><p>This is really helpful. Any chance I could actually get 10 minutes with Ed?</p></div>
+          </div>
+        </div>
+
+        <!-- avatar fires push -->
+        <div class="msg msg--avatar">
+          <div class="avatar avatar-twin" style="background-image:url('../assets/avatar-robot-round.png')"></div>
+          <div class="msg-body">
+            <div class="msg-meta"><span class="msg-name">Avatar</span><span class="msg-time">2:44 PM</span></div>
+            <div class="tool-status is-done"><svg class="icon"><use href="#i-mail"/></svg> push_tool · notified you</div>
+            <div class="bubble"><p>Absolutely. Drop your email and I'll make sure Ed sees it — I've pinged him already.</p></div>
+          </div>
+        </div>
+
+        <!-- visitor email -->
+        <div class="msg msg--visitor">
+          <span class="avatar-initials">JM</span>
+          <div class="msg-body">
+            <div class="msg-meta"><span class="msg-time">2:45 PM</span></div>
+            <div class="bubble"><p>jordan.m@example.com — thanks!</p></div>
+          </div>
+        </div>
+
+        <!-- the human's own message (drafted from admin) -->
+        <div class="msg msg--human">
+          <div class="avatar avatar-human" style="background-image:url('../assets/avatar-human.png')">
+            <span class="spark-badge"><svg class="icon"><use href="#i-spark"/></svg></span>
+          </div>
+          <div class="msg-body">
+            <div class="msg-meta">
+              <span class="human-tag"><svg class="icon"><use href="#i-live"/></svg> You · sent to visitor</span>
+              <span class="msg-time">2:46 PM</span>
+            </div>
+            <div class="bubble"><p>Hey Jordan — it's actually me, jumping in. Happy to chat properly. Does Thursday around 2pm ET work? I'll send a calendar link to that address.</p></div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Admin composer -->
+    <div class="admin-composer-dock">
+      <div class="admin-composer-wrap">
+        <div class="posting-as">
+          <span class="avatar avatar-human" style="background-image:url('../assets/avatar-human.png')"></span>
+          Posting as <strong>you</strong> — the visitor sees this from your photo, with <strong>no name shown</strong>. The Avatar won't reply to it.
+        </div>
+        <div class="composer" id="composer">
+          <textarea rows="1" placeholder="Write a message to Jordan…" autofocus></textarea>
+          <button class="btn-send" title="Send (Enter)"><svg class="icon"><use href="#i-send"/></svg></button>
+        </div>
+        <div class="kbd-hints">
+          <span class="h"><span class="kbd"><svg class="icon" style="width:12px;height:12px"><use href="#i-chev-up"/></svg></span><span class="kbd"><svg class="icon" style="width:12px;height:12px"><use href="#i-chev-down"/></svg></span> move between conversations</span>
+          <span class="h"><span class="kbd">Enter</span> send</span>
+          <span class="h"><span class="kbd">Shift</span>+<span class="kbd">Enter</span> new line</span>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<script>
+  const root = document.documentElement;
+  const saved = localStorage.getItem('avatar-theme');
+  if (saved) root.setAttribute('data-theme', saved);
+  function syncThemeIcon(){
+    const dark = root.getAttribute('data-theme') === 'dark';
+    document.querySelector('.theme-moon').style.display = dark ? '' : 'none';
+    document.querySelector('.theme-sun').style.display = dark ? 'none' : '';
+  }
+  syncThemeIcon();
+  document.getElementById('themeToggle').addEventListener('click', () => {
+    const next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    root.setAttribute('data-theme', next); localStorage.setItem('avatar-theme', next); syncThemeIcon();
+  });
+  const thread = document.getElementById('thread');
+  function toLatest(){ thread.scrollTop = thread.scrollHeight; }
+  window.addEventListener('load', () => { toLatest(); setTimeout(toLatest, 250); });
+  document.querySelector('.composer textarea').focus({ preventScroll: true });
+</script>
+</body>
+</html>

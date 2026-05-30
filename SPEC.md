@@ -76,6 +76,37 @@ Ensure that the chat message field takes focus for the user when they bring up t
 
 The image in knowledge/pic.jpg should be used for the Avatar icon for the Human, and a robotic version of it should be used as the Avatar icon for the Avatar, looking like a Digital Twin of the human.
 
+## Design System
+
+A complete, build-ready visual and interaction system has been provided in the `design-system/` directory (produced by the sister product Claude Design). It pairs with this SPEC. The split is explicit: **SPEC.md governs behaviour and the backend; `design-system/` governs look and feel.** When the two disagree, SPEC wins on behaviour, the design system wins on appearance.
+
+### Structure of `design-system/`
+
+- **`Avatar Design System.html`** - the navigable design-system document (it dogfoods its own tokens). Open this rendered first.
+- **`SKILL.md`** - the front-end build brief: how to turn the system into the real product UI, plus an acceptance checklist.
+- **`README.md`** - overview and contents table.
+- **`tokens.css`** - single source of truth: brand palette, type scale, spacing, radii, motion, and full **dark** (the hero) and **light** themes, switched via `[data-theme="dark"|"light"]` on `<html>`. Role colours are baked in: visitor = blue, avatar (twin) = cyan, human = yellow.
+- **`components.css`** - build-ready component classes shared by the mockups and the doc: buttons, fields, the Keep-chat switch, badges, the three message bubbles, tool-status lines, the `Qn` instant-tag, the composer, inbox rows, and avatars. Depends on `tokens.css`.
+- **`icons.svg`** - icon sprite, used as `<use href="icons.svg#i-...">`; icons inherit `currentColor`.
+- **`doc.css`** - styles for the doc page only (NOT product code).
+- **`assets/`** - `avatar-human.png` (the owner's real photo), `avatar-robot.png` (synthetic twin, square with HUD frame), `avatar-robot-round.png` (twin tuned for circular chat avatars).
+- **`mockups/`** - hi-fi reference screens `Visitor Chat.html` and `Admin Dashboard.html` (both with a dark/light toggle). These are the literal build targets.
+- **`docs/`** - `ux-flows.md` (every interaction contract plus a states matrix to design and test against), `components.md` (component-by-component class reference), `avatar-generation.md` (the recipe to produce the twin image from the owner's photo).
+
+### Design language
+
+Dark-first, navy-tinted surfaces; editorial serif **Newsreader** (display) + crisp grotesque **Hanken Grotesk** (UI) + **JetBrains Mono** (technical layer); **blue-led** identity with **yellow as the "spark" reserved for the human-in-the-loop**, and **purple locked to primary actions only**. No gradients in chrome, no purple wash, no left-edge accent bars, no emoji. This matches the SPEC palette and the "not a generic chatbot" mandate.
+
+### How to use it in the build
+
+The frontend is vanilla TypeScript + Vite (per SPEC). Copy `tokens.css`, `components.css`, `icons.svg` and `assets/` into the frontend; load order is `tokens.css` -> `components.css` -> page CSS; import the Google Fonts (Newsreader, Hanken Grotesk, JetBrains Mono). Build the two screens by composing the component classes and lifting the markup from the mockups, which are the tie-breaker for any ambiguity. Default theme is dark, persisted (the mockups use `localStorage['avatar-theme']`). Do not invent new colours - derive from tokens.
+
+### Notes
+
+- The design system says "no left-edge accent bars," yet `.convo-item.is-active::before` in `components.css` draws a small left bar on the *active admin inbox row*. This is acceptable: that rule is about message/content panels (and is honoured on the human bubble); the inbox bar is a selection indicator. Follow the mockups.
+- Treat the shipped PNGs in `assets/` as the source of truth for the avatar images rather than re-deriving them. The `avatar-robot*.png` files resolve the earlier open question about providing the robotic icon.
+- **Owner-specific regeneration:** these assets, copy, and identity are currently built for the default owner (Ed). If someone *other than Ed* stands up their own site, the build must be updated end to end for that person - including regenerating the Avatar images from their own `knowledge/pic.jpg` (per the recipe in `design-system/docs/avatar-generation.md`), and updating the human photo, brand subtitle, and any owner-specific copy. The owner's name comes from the `OWNER_NAME` env var and is shown in the UI (including the human bubble, e.g. "Ed Donner - live"); it must always be read from that config and never hardcoded (per Q&A #4 and #11).
+
 ## Testing
 
 Testing is absolutely crucial for the success of this project.
@@ -89,6 +120,20 @@ You should write comprehensive test plans for each of these, document the test p
 NOTE: It's good to use the model and pushover as part of your testing, but change the model to gpt-5.4-nano to reduce costs. Then it's fine to call the LLM for tests and to write test conversations in the Supabase database. There are sensible rate limits on the OpenRouter key; you can use it as much as you wish.
 
 When you've completed testing, delete the screenshots and delete the test conversation threads in Supabase, and check off the items in your test plans.
+
+## Setup and Validation
+
+Before running or developing the app, the environment must be set up and validated:
+
+1. **Follow the README setup instructions.** Anyone standing up their own site (their own Digital Twin) must follow the "Setup instructions" section in `README.md`. This covers obtaining an OpenRouter API key, creating the Supabase project and `messages` table, and putting all required keys into `.env` (`OPENROUTER_API_KEY`, `MODEL`, `OWNER_NAME`, `ADMIN_PASSWORD`, `PUSHOVER_USER`, `PUSHOVER_TOKEN`, `SUPABASE_URL`, `SUPABASE_KEY`).
+
+2. **Run the connectivity test to validate.** After the README steps are complete, run the Supabase connectivity test to confirm the credentials work and the `messages` table is reachable and writable:
+
+   ```
+   cd backend && uv run pytest tests/test_supabase_connection.py -v
+   ```
+
+   All tests must pass before proceeding. This validates that the `.env` values are correct and that the Data API, table, and grants are configured as expected.
 
 ## Success Criteria
 
@@ -104,7 +149,9 @@ Clarifications agreed before starting work:
 
 3. **Knowledge / RAG.** No vector DB. Inline `summary.txt` + extracted `linkedin.pdf` text into the system prompt, and expose `faq.jsonl` via the numbered `faq_tool` plus the `Qn` instant-answer shortcut. (The old qdrant reference was from another project and has been removed from `next_level.ipynb`.)
 
-4. **Human-in-the-loop semantics.** When the human posts from admin, the Avatar does NOT react to it. The human's message is inserted into the thread; the full conversation (including it) is provided to the Avatar the next time the visitor submits something. To the visitor, the human's message renders as a separate bubble using the profile pic, but with NO name shown anywhere (students may build this for themselves, so the human's name must never be hardcoded).
+4. **Human-in-the-loop semantics.** When the human posts from admin, the Avatar does NOT react to it. The human's message is inserted into the thread; the full conversation (including it) is provided to the Avatar the next time the visitor submits something. To the visitor, the human's message renders as a separate bubble using the profile pic, distinguished by image + yellow ring + tint + glow (per the design system).
+
+   **Owner name (updated).** The owner's name comes from the `OWNER_NAME` env var (see #11) and IS shown in the UI, including on the human's bubble (e.g. "Ed Donner - live") to avoid an awkward anonymous bubble. The name must always be read from `OWNER_NAME` config and NEVER hardcoded, so students building their own site simply set their own value.
 
 5. **Needs-human + read/unread state.** Persist these as fields on each message row in the conversation table: a `needs_attention` flag (set when `push_tool` fires) and an unread / read marker. Both cleared/updated when the human opens the thread in admin.
 
@@ -117,3 +164,5 @@ Clarifications agreed before starting work:
 9. **Streaming vs polling.** Stream the Avatar's reply to the active visitor via SSE (showing tool use in small font). The 10s/60s poll is only for picking up the human's async messages.
 
 10. **Contact capture.** Keep the behavior from `context.py`: when a visitor wants to get in touch, the twin asks for their email and pushes it to the human via Pushover.
+
+11. **Owner name configuration.** `OWNER_NAME` in `.env` holds the name of the person the twin represents. It is shown in the site header/subtitle, the page title, how the Avatar refers to itself, and on the human's messages when the owner joins from admin (e.g. "Ed Donner - live"). Always sourced from config, never hardcoded - each owner sets their own.

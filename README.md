@@ -13,12 +13,15 @@ All secrets live in a single `.env` file in the project root. By the end of this
 ```
 OPENROUTER_API_KEY=sk-or-v1-...
 MODEL=openai/gpt-5.4-nano
+OWNER_NAME=Ed Donner
 ADMIN_PASSWORD=your-chosen-admin-password
 PUSHOVER_USER=...
 PUSHOVER_TOKEN=...
 SUPABASE_URL=https://your-project-ref.supabase.co
 SUPABASE_KEY=sb_secret_...
 ```
+
+`OWNER_NAME` is the name of the person this Digital Twin represents (you). It is shown in the UI - the site header/subtitle, the page title, how the Avatar refers to itself, and on your own messages when you join a conversation from admin (e.g. "Ed Donner - live"). Set it to how you want your name to appear. It is configuration, never hardcoded, so each owner sets their own.
 
 ### OpenRouter
 

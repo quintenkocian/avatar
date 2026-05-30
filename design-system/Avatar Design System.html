@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Avatar — Design System</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:ital,wght@0,400;0,500;0,600;0,700;1,500&family=JetBrains+Mono:wght@400;500&family=Newsreader:ital,opsz,wght@0,18..72,400;0,18..72,500;0,18..72,600;1,18..72,400;1,18..72,500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="components.css">
+<link rel="stylesheet" href="doc.css">
+</head>
+<body class="scroll">
+
+<!-- ICON SPRITE (full set) -->
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none" aria-hidden="true"><defs><style>
+  symbol{fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+  symbol .fill{fill:currentColor;stroke:none}</style></defs>
+  <symbol id="i-send" viewBox="0 0 24 24"><path d="M12 20V5"/><path d="M6 11l6-6 6 6"/></symbol>
+  <symbol id="i-reset" viewBox="0 0 24 24"><path d="M19.5 12a7.5 7.5 0 1 1-2.2-5.3"/><path d="M19.7 4.5v3.3h-3.3"/></symbol>
+  <symbol id="i-keep" viewBox="0 0 24 24"><path d="M7 4.5h10v15l-5-3.6-5 3.6z"/></symbol>
+  <symbol id="i-visitor" viewBox="0 0 24 24"><circle cx="12" cy="8.5" r="3.3"/><path d="M5.5 19.2a6.6 6.6 0 0 1 13 0"/></symbol>
+  <symbol id="i-avatar" viewBox="0 0 24 24"><rect x="5" y="7.5" width="14" height="11.5" rx="2.4"/><path d="M12 7.5V4.4"/><circle cx="12" cy="3.4" r="1.05" class="fill"/><circle cx="9.4" cy="13" r="1.05" class="fill"/><circle cx="14.6" cy="13" r="1.05" class="fill"/><path d="M9.4 16.4h5.2"/></symbol>
+  <symbol id="i-spark" viewBox="0 0 24 24"><path d="M12 3.2l1.9 6.5 6.5 1.9-6.5 1.9L12 20l-1.9-6.5L3.6 11.6l6.5-1.9z"/></symbol>
+  <symbol id="i-bell" viewBox="0 0 24 24"><path d="M6.2 9.4a5.8 5.8 0 0 1 11.6 0c0 4.7 1.9 5.9 1.9 5.9H4.3s1.9-1.2 1.9-5.9z"/><path d="M10.2 19.2a2 2 0 0 0 3.6 0"/></symbol>
+  <symbol id="i-inbox" viewBox="0 0 24 24"><path d="M4 13.2l2.4-7h11.2L20 13.2v4.6a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1z"/><path d="M4 13.2h4l1.1 2.1h5.8L16 13.2h4"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="10.8" cy="10.8" r="6.2"/><path d="M15.4 15.4L20 20"/></symbol>
+  <symbol id="i-sliders" viewBox="0 0 24 24"><path d="M5 8h7M16 8h3M5 16h3M12 16h7"/><circle cx="14" cy="8" r="2"/><circle cx="10" cy="16" r="2"/></symbol>
+  <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2.6v2.4M12 19v2.4M2.6 12h2.4M19 12h2.4M5.3 5.3l1.7 1.7M17 17l1.7 1.7M18.7 5.3L17 7M7 17l-1.7 1.7"/></symbol>
+  <symbol id="i-moon" viewBox="0 0 24 24"><path d="M20 14.2A8 8 0 0 1 9.8 4 8 8 0 1 0 20 14.2z"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.5l4.2 4.3L19 7"/></symbol>
+  <symbol id="i-check2" viewBox="0 0 24 24"><path d="M3.5 12.6l3.8 3.9L15.4 8"/><path d="M11 16l.4.5L20 8"/></symbol>
+  <symbol id="i-dot" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4.5" class="fill"/></symbol>
+  <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="10.5" width="14" height="9.5" rx="2"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5"/><path d="M12 14.5v2.2"/></symbol>
+  <symbol id="i-mail" viewBox="0 0 24 24"><rect x="3.5" y="5.5" width="17" height="13" rx="2"/><path d="M4 7l8 5.5L20 7"/></symbol>
+  <symbol id="i-chev-up" viewBox="0 0 24 24"><path d="M6 14.5l6-6 6 6"/></symbol>
+  <symbol id="i-chev-down" viewBox="0 0 24 24"><path d="M6 9.5l6 6 6-6"/></symbol>
+  <symbol id="i-chev-right" viewBox="0 0 24 24"><path d="M9.5 6l6 6-6 6"/></symbol>
+  <symbol id="i-enter" viewBox="0 0 24 24"><path d="M20 6.5v4a3 3 0 0 1-3 3H5"/><path d="M9 9.5l-4 4 4 4"/></symbol>
+  <symbol id="i-tool" viewBox="0 0 24 24"><rect x="5" y="6" width="14" height="12" rx="2"/><path d="M8.5 10.5l2 1.5-2 1.5"/><path d="M12.5 14h3"/></symbol>
+  <symbol id="i-copy" viewBox="0 0 24 24"><rect x="8.5" y="8.5" width="11" height="11" rx="2"/><path d="M15.5 8.5V6a1.5 1.5 0 0 0-1.5-1.5H6A1.5 1.5 0 0 0 4.5 6v8A1.5 1.5 0 0 0 6 15.5h2.5"/></symbol>
+  <symbol id="i-close" viewBox="0 0 24 24"><path d="M6.5 6.5l11 11M17.5 6.5l-11 11"/></symbol>
+  <symbol id="i-menu" viewBox="0 0 24 24"><path d="M4.5 7.5h15M4.5 12h15M4.5 16.5h15"/></symbol>
+  <symbol id="i-external" viewBox="0 0 24 24"><path d="M14 5h5v5"/><path d="M19 5l-8 8"/><path d="M18 14v4a1.5 1.5 0 0 1-1.5 1.5h-10A1.5 1.5 0 0 1 5 18V8a1.5 1.5 0 0 1 1.5-1.5H10"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 7.5V12l3 2"/></symbol>
+  <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3.2l7 2.6v5.2c0 4.6-3.1 7.6-7 8.8-3.9-1.2-7-4.2-7-8.8V5.8z"/><path d="M9 12l2 2 4-4"/></symbol>
+  <symbol id="i-edit" viewBox="0 0 24 24"><path d="M5 19h4l9-9-4-4-9 9z"/><path d="M13.5 6.5l4 4"/></symbol>
+  <symbol id="i-arrow-right" viewBox="0 0 24 24"><path d="M4.5 12h14"/><path d="M13 6.5l5.5 5.5L13 17.5"/></symbol>
+  <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2.8 12S6 5.8 12 5.8 21.2 12 21.2 12 18 18.2 12 18.2 2.8 12 2.8 12z"/><circle cx="12" cy="12" r="2.6"/></symbol>
+  <symbol id="i-live" viewBox="0 0 24 24"><circle cx="12" cy="12" r="2.2" class="fill"/><path d="M7.8 7.8a6 6 0 0 0 0 8.4M16.2 16.2a6 6 0 0 0 0-8.4"/><path d="M5 5a9.5 9.5 0 0 0 0 14M19 19a9.5 9.5 0 0 0 0-14"/></symbol>
+</svg>
+
+<div class="shell">
+  <!-- ===================== NAV ===================== -->
+  <nav class="nav">
+    <div class="nav-brand">
+      <span class="brand-mark">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+          <circle cx="9.5" cy="13" r="5" fill="var(--blue-strong)"/>
+          <circle cx="15.5" cy="13" r="5" stroke="var(--blue-strong)" stroke-width="1.6"/>
+          <circle cx="15.5" cy="13" r="1.4" fill="var(--yellow-strong)"/>
+        </svg>
+      </span>
+      <div><div class="t">Avatar</div><div class="s">Design System v1</div></div>
+    </div>
+
+    <div class="nav-group">
+      <span class="lbl">Overview</span>
+      <a href="#intro"><svg class="icon"><use href="#i-avatar"/></svg> The concept</a>
+      <a href="#principles"><svg class="icon"><use href="#i-spark"/></svg> Principles</a>
+    </div>
+    <div class="nav-group">
+      <span class="lbl">Foundations</span>
+      <a href="#color"><svg class="icon"><use href="#i-eye"/></svg> Color</a>
+      <a href="#type"><svg class="icon"><use href="#i-edit"/></svg> Typography</a>
+      <a href="#space"><svg class="icon"><use href="#i-sliders"/></svg> Space &amp; radius</a>
+      <a href="#motion"><svg class="icon"><use href="#i-live"/></svg> Elevation &amp; motion</a>
+    </div>
+    <div class="nav-group">
+      <span class="lbl">Identity</span>
+      <a href="#avatar"><svg class="icon"><use href="#i-avatar"/></svg> The Avatar &amp; twin</a>
+      <a href="#icons"><svg class="icon"><use href="#i-tool"/></svg> Iconography</a>
+    </div>
+    <div class="nav-group">
+      <span class="lbl">Components</span>
+      <a href="#components"><svg class="icon"><use href="#i-menu"/></svg> Library</a>
+      <a href="#roles"><svg class="icon"><use href="#i-visitor"/></svg> The three roles</a>
+    </div>
+    <div class="nav-group">
+      <span class="lbl">Screens &amp; UX</span>
+      <a href="#visitor"><svg class="icon"><use href="#i-send"/></svg> Visitor chat</a>
+      <a href="#admin"><svg class="icon"><use href="#i-inbox"/></svg> Admin dashboard</a>
+      <a href="#flows"><svg class="icon"><use href="#i-arrow-right"/></svg> Flows &amp; behaviour</a>
+      <a href="#voice"><svg class="icon"><use href="#i-spark"/></svg> Voice &amp; tone</a>
+    </div>
+    <div class="nav-group">
+      <span class="lbl">Build</span>
+      <a href="#handoff"><svg class="icon"><use href="#i-shield"/></svg> Handoff &amp; tokens</a>
+    </div>
+
+    <div class="nav-foot">
+      <hr class="hairline">
+      <a href="mockups/Visitor%20Chat.html" target="_blank"><svg class="icon"><use href="#i-external"/></svg> Open visitor mockup</a>
+      <a href="mockups/Admin%20Dashboard.html" target="_blank"><svg class="icon"><use href="#i-external"/></svg> Open admin mockup</a>
+    </div>
+  </nav>
+
+  <!-- ===================== CONTENT ===================== -->
+  <main class="content">
+
+    <!-- COVER -->
+    <header class="cover hud-grid" id="intro">
+      <span class="eyebrow">Avatar — digital twin platform · design system</span>
+      <h1>A twin you can talk to.<br>A <em>human</em> who can step in.</h1>
+      <p class="deck">The visual and interaction system for Avatar: a three-way conversation between a website visitor, an AI digital twin, and the real person behind it.</p>
+      <div class="cover-meta">
+        <div class="m"><div class="k">Surface</div><div class="v">Dark-first, light parity</div></div>
+        <div class="m"><div class="k">Type</div><div class="v">Newsreader · Hanken · JetBrains Mono</div></div>
+        <div class="m"><div class="k">Accent</div><div class="v">Blue-led, yellow spark</div></div>
+        <div class="m"><div class="k">Stack</div><div class="v">Vanilla TS · Vite · FastAPI</div></div>
+      </div>
+    </header>
+
+    <!-- PRINCIPLES -->
+    <section class="section" id="principles">
+      <div class="sec-head">
+        <span class="eyebrow">01 — Overview</span>
+        <h2>Sharp, fresh, and <em>unmistakably not</em> a chatbot.</h2>
+        <p>Avatar is a personal digital twin running on someone's website. It looks like a precise instrument, reads like an editorial product, and treats the rare moment when the real human joins as the emotional centre of the experience.</p>
+      </div>
+      <div class="grid cols-3">
+        <div class="panel">
+          <h3 class="block-title" style="margin:0 0 8px">Instrument, not toy</h3>
+          <p class="lead-note" style="margin:0">Crisp type, a faint technical grid, monospace metadata. Confident and a little futuristic — never playful filler.</p>
+        </div>
+        <div class="panel">
+          <h3 class="block-title" style="margin:0 0 8px">The human is the spark</h3>
+          <p class="lead-note" style="margin:0">Yellow is reserved for the moments the real person matters: their message, the "needs you" flag, focus.</p>
+        </div>
+        <div class="panel">
+          <h3 class="block-title" style="margin:0 0 8px">Earned restraint</h3>
+          <p class="lead-note" style="margin:0">No gradients in chrome, no purple wash, no accent bars down the side of panels, no emoji. Every mark earns its place.</p>
+        </div>
+      </div>
+      <div class="callout" style="margin-top:24px">
+        <svg class="icon"><use href="#i-shield"/></svg>
+        <div>This document dogfoods the system: every colour, type style and component on this page is rendered from <span class="spec-code">tokens.css</span> + <span class="spec-code">components.css</span> — the same files the product ships. Toggle dark / light with the control at the bottom-right.</div>
+      </div>
+    </section>
+
+    <!-- COLOR -->
+    <section class="section" id="color">
+      <div class="sec-head">
+        <span class="eyebrow">02 — Foundations</span>
+        <h2>Color</h2>
+        <p>Five fixed brand hues, a navy-tinted neutral ramp, and strict rules about who gets to be loud. Blue carries identity; yellow is the spark; purple is locked to primary actions only.</p>
+      </div>
+
+      <h3 class="block-title">Brand palette</h3>
+      <div class="grid cols-3">
+        <div class="swatch"><div class="chip" style="background:#209dd7"></div><div class="meta"><div class="name">Blue — Primary</div><div class="hex">#209dd7</div><div class="role">Identity, links, the Avatar, key sections. The default accent.</div></div></div>
+        <div class="swatch"><div class="chip" style="background:#ecad0a"></div><div class="meta"><div class="name">Yellow — Spark</div><div class="hex">#ecad0a</div><div class="role">Highlights, accent lines, human-in-the-loop, needs-attention, focus.</div></div></div>
+        <div class="swatch"><div class="chip" style="background:#753991"></div><div class="meta"><div class="name">Purple — Action</div><div class="hex">#753991</div><div class="role">Reserved strictly for submit / primary buttons. Never decorative.</div></div></div>
+        <div class="swatch"><div class="chip" style="background:#032147"></div><div class="meta"><div class="name">Navy — Structure</div><div class="hex">#032147</div><div class="role">Headings in light mode; the canvas itself in dark mode.</div></div></div>
+        <div class="swatch"><div class="chip" style="background:#888888"></div><div class="meta"><div class="name">Gray — Support</div><div class="hex">#888888</div><div class="role">Labels, secondary text, metadata, timestamps.</div></div></div>
+        <div class="swatch"><div class="chip" style="background:var(--surface-2);border-bottom:1px solid var(--border)"></div><div class="meta"><div class="name">Neutrals</div><div class="hex">themed</div><div class="role">Cool, navy-tinted surfaces &amp; text — see the ramps below.</div></div></div>
+      </div>
+
+      <h3 class="block-title">Themed neutral ramp</h3>
+      <p class="lead-note">Surfaces step up from canvas toward the viewer. Identical token names in both themes — only the values flip.</p>
+      <div class="ramp" style="margin-bottom:12px">
+        <div class="step" style="background:var(--surface-0);color:var(--text-faint)">surface-0</div>
+        <div class="step" style="background:var(--surface-1);color:var(--text-faint)">surface-1</div>
+        <div class="step" style="background:var(--surface-2);color:var(--text-faint)">surface-2</div>
+        <div class="step" style="background:var(--surface-3);color:var(--text-muted)">surface-3</div>
+        <div class="step" style="background:var(--border);color:var(--text)">border</div>
+        <div class="step" style="background:var(--border-strong);color:var(--text)">border-strong</div>
+      </div>
+      <div class="ramp">
+        <div class="step" style="background:var(--text);color:var(--surface-0)">text</div>
+        <div class="step" style="background:var(--text-muted);color:var(--surface-0)">text-muted</div>
+        <div class="step" style="background:var(--text-faint);color:var(--surface-0)">text-faint</div>
+        <div class="step" style="background:var(--blue);color:#fff">blue</div>
+        <div class="step" style="background:var(--yellow);color:#1a1303">yellow</div>
+        <div class="step" style="background:var(--purple);color:#fff">purple</div>
+      </div>
+
+      <h3 class="block-title">Role colours</h3>
+      <div class="grid cols-3">
+        <div class="panel" style="display:flex;align-items:center;gap:14px">
+          <span style="width:42px;height:42px;border-radius:8px;background:var(--blue-soft);border:1px solid var(--blue-line);display:flex;align-items:center;justify-content:center"><svg class="icon" style="color:var(--blue)"><use href="#i-visitor"/></svg></span>
+          <div><div style="font-weight:700">Visitor</div><div class="lead-note" style="margin:0;font-size:13px">Blue identity · initials token</div></div>
+        </div>
+        <div class="panel" style="display:flex;align-items:center;gap:14px">
+          <span style="width:42px;height:42px;border-radius:8px;background:var(--blue-soft);border:1px solid var(--blue-line);display:flex;align-items:center;justify-content:center"><svg class="icon" style="color:var(--role-avatar)"><use href="#i-avatar"/></svg></span>
+          <div><div style="font-weight:700">Avatar (twin)</div><div class="lead-note" style="margin:0;font-size:13px">Cyan-blue · synthetic photo</div></div>
+        </div>
+        <div class="panel" style="display:flex;align-items:center;gap:14px">
+          <span style="width:42px;height:42px;border-radius:8px;background:var(--yellow-soft);border:1px solid var(--yellow-line);display:flex;align-items:center;justify-content:center"><svg class="icon" style="color:var(--yellow-strong)"><use href="#i-spark"/></svg></span>
+          <div><div style="font-weight:700">Human</div><div class="lead-note" style="margin:0;font-size:13px">Yellow spark · real photo</div></div>
+        </div>
+      </div>
+
+      <div class="callout warn" style="margin-top:24px">
+        <svg class="icon"><use href="#i-spark"/></svg>
+        <div><strong>Hard rules.</strong> No gradients in UI chrome (decorative HUD grids excepted). Purple appears only on primary action buttons. Never run an accent colour as a bar down the left edge of a panel. Yellow is never used for body text — its contrast is reserved for marks, dots, rings and tints.</div>
+      </div>
+    </section>
+
+    <!-- TYPE -->
+    <section class="section" id="type">
+      <div class="sec-head">
+        <span class="eyebrow">02 — Foundations</span>
+        <h2>Typography</h2>
+        <p>An editorial contrast pairing: a characterful serif for display moments, a precise neutral grotesque for everything functional, and a monospace for the technical layer — IDs, timestamps, tool calls, labels.</p>
+      </div>
+      <div class="grid cols-3" style="margin-bottom:32px">
+        <div class="panel"><div class="eyebrow" style="margin-bottom:10px">Display</div><div style="font-family:var(--font-display);font-size:34px;line-height:1">Newsreader</div><div class="lead-note" style="margin:10px 0 0;font-size:13px">Editorial serif. Headlines, the wordmark, the twin's voice. Italics for emphasis.</div></div>
+        <div class="panel"><div class="eyebrow" style="margin-bottom:10px">Body / UI</div><div style="font-family:var(--font-sans);font-size:34px;line-height:1;font-weight:600">Hanken Grotesk</div><div class="lead-note" style="margin:10px 0 0;font-size:13px">Neutral, crisp, legible. All interface text and message bodies.</div></div>
+        <div class="panel"><div class="eyebrow" style="margin-bottom:10px">Mono</div><div style="font-family:var(--font-mono);font-size:30px;line-height:1">JetBrains</div><div class="lead-note" style="margin:10px 0 0;font-size:13px">The technical layer: conv IDs, timestamps, tool status, eyebrow labels.</div></div>
+      </div>
+
+      <div class="specimen">
+        <div class="row"><span class="tag">Display / 4xl</span><span class="sample display" style="font-size:var(--text-4xl)">Ask me anything</span></div>
+        <div class="row"><span class="tag">Display / 2xl italic</span><span class="sample display display--italic" style="font-size:var(--text-2xl);color:var(--blue)">the real one might chime in</span></div>
+        <div class="row"><span class="tag">Heading / xl</span><span class="sample" style="font-family:var(--font-sans);font-weight:700;font-size:var(--text-xl);letter-spacing:-0.01em">Conversations inbox</span></div>
+        <div class="row"><span class="tag">Body / md</span><span class="sample" style="font-size:var(--text-md);line-height:var(--leading-relaxed)">The cleanest path is the Agentic AI Engineering course — it builds RAG from first principles, then layers agents on top.</span></div>
+        <div class="row"><span class="tag">Body / base</span><span class="sample" style="font-size:var(--text-base)">Interface default. Buttons, fields, list items, secondary copy.</span></div>
+        <div class="row"><span class="tag">Mono / caps</span><span class="sample eyebrow" style="font-size:var(--text-xs)">CONV_B3F2A9 · 2:46 PM · NEEDS YOU</span></div>
+      </div>
+    </section>
+
+    <!-- SPACE -->
+    <section class="section" id="space">
+      <div class="sec-head">
+        <span class="eyebrow">02 — Foundations</span>
+        <h2>Space &amp; radius</h2>
+        <p>A 4px spacing base keeps rhythm tight and predictable. Corners are crisp — small radii read as "instrument", not "bubble".</p>
+      </div>
+      <div class="grid cols-2">
+        <div class="panel">
+          <div class="eyebrow" style="margin-bottom:16px">Spacing scale · 4px base</div>
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <div style="display:flex;align-items:center;gap:14px"><code class="spec-code" style="width:54px">4</code><span style="height:14px;width:4px;background:var(--blue-strong)"></span></div>
+            <div style="display:flex;align-items:center;gap:14px"><code class="spec-code" style="width:54px">8</code><span style="height:14px;width:8px;background:var(--blue-strong)"></span></div>
+            <div style="display:flex;align-items:center;gap:14px"><code class="spec-code" style="width:54px">12</code><span style="height:14px;width:12px;background:var(--blue-strong)"></span></div>
+            <div style="display:flex;align-items:center;gap:14px"><code class="spec-code" style="width:54px">16</code><span style="height:14px;width:16px;background:var(--blue-strong)"></span></div>
+            <div style="display:flex;align-items:center;gap:14px"><code class="spec-code" style="width:54px">24</code><span style="height:14px;width:24px;background:var(--blue-strong)"></span></div>
+            <div style="display:flex;align-items:center;gap:14px"><code class="spec-code" style="width:54px">32</code><span style="height:14px;width:32px;background:var(--blue-strong)"></span></div>
+            <div style="display:flex;align-items:center;gap:14px"><code class="spec-code" style="width:54px">48</code><span style="height:14px;width:48px;background:var(--blue-strong)"></span></div>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="eyebrow" style="margin-bottom:16px">Radius</div>
+          <div style="display:flex;flex-wrap:wrap;gap:16px">
+            <div style="text-align:center"><div style="width:72px;height:56px;background:var(--surface-3);border:1px solid var(--border-strong);border-radius:var(--radius-sm)"></div><div class="hex" style="font-family:var(--font-mono);font-size:11px;color:var(--text-faint);margin-top:6px">sm · 5</div></div>
+            <div style="text-align:center"><div style="width:72px;height:56px;background:var(--surface-3);border:1px solid var(--border-strong);border-radius:var(--radius-md)"></div><div class="hex" style="font-family:var(--font-mono);font-size:11px;color:var(--text-faint);margin-top:6px">md · 8</div></div>
+            <div style="text-align:center"><div style="width:72px;height:56px;background:var(--surface-3);border:1px solid var(--border-strong);border-radius:var(--radius-lg)"></div><div class="hex" style="font-family:var(--font-mono);font-size:11px;color:var(--text-faint);margin-top:6px">lg · 12</div></div>
+            <div style="text-align:center"><div style="width:72px;height:56px;background:var(--surface-3);border:1px solid var(--border-strong);border-radius:var(--radius-xl)"></div><div class="hex" style="font-family:var(--font-mono);font-size:11px;color:var(--text-faint);margin-top:6px">xl · 16</div></div>
+            <div style="text-align:center"><div style="width:72px;height:56px;background:var(--surface-3);border:1px solid var(--border-strong);border-radius:var(--radius-pill)"></div><div class="hex" style="font-family:var(--font-mono);font-size:11px;color:var(--text-faint);margin-top:6px">pill</div></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ELEVATION & MOTION -->
+    <section class="section" id="motion">
+      <div class="sec-head">
+        <span class="eyebrow">02 — Foundations</span>
+        <h2>Elevation &amp; motion</h2>
+        <p>In dark mode, depth comes mostly from borders and a quiet shadow; in light, from soft ambient shadows. Motion is brisk and confident — nothing floaty.</p>
+      </div>
+      <div class="grid cols-3" style="margin-bottom:24px">
+        <div class="panel" style="box-shadow:var(--shadow-sm)"><div class="eyebrow">shadow-sm</div><div class="lead-note" style="margin:8px 0 0;font-size:13px">Resting cards, list rows.</div></div>
+        <div class="panel" style="box-shadow:var(--shadow-md)"><div class="eyebrow">shadow-md</div><div class="lead-note" style="margin:8px 0 0;font-size:13px">Composer, popovers, raised panels.</div></div>
+        <div class="panel" style="box-shadow:var(--shadow-lg)"><div class="eyebrow">shadow-lg</div><div class="lead-note" style="margin:8px 0 0;font-size:13px">Modals, focused screens, dialogs.</div></div>
+      </div>
+      <table class="spec">
+        <thead><tr><th>Token</th><th>Value</th><th>Use</th></tr></thead>
+        <tbody>
+          <tr><td>dur-fast</td><td><code>120ms</code></td><td>Hover, press, small state flips</td></tr>
+          <tr><td>dur</td><td><code>200ms</code></td><td>Theme &amp; toggle transitions, reveals</td></tr>
+          <tr><td>dur-slow</td><td><code>360ms</code></td><td>Streaming entrance, the human-moment reveal</td></tr>
+          <tr><td>ease-out</td><td><code>cubic-bezier(.22,.78,.24,1)</code></td><td>Default easing for nearly everything</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- AVATAR IDENTITY -->
+    <section class="section" id="avatar">
+      <div class="sec-head">
+        <span class="eyebrow">03 — Identity</span>
+        <h2>The Avatar &amp; the twin</h2>
+        <p>Two faces, one person. The human is rendered exactly as they are — warm, photographic, real. The Avatar is the same face rebuilt as a synthetic twin: cool chrome duotone, posterised paneling, glowing eyes, a HUD frame. The contrast is the product.</p>
+      </div>
+      <div class="identity">
+        <div class="face">
+          <img src="assets/avatar-human.png" alt="The human">
+          <div class="cap"><div class="h"><svg class="icon" style="color:var(--yellow-strong)"><use href="#i-spark"/></svg> The human</div><div class="d">The real person. Used for their own messages and the admin owner chip. Always natural, never stylised. Ringed in yellow when live.</div></div>
+        </div>
+        <div class="face">
+          <img src="assets/avatar-robot.png" alt="The digital twin">
+          <div class="cap"><div class="h"><svg class="icon" style="color:var(--role-avatar)"><use href="#i-avatar"/></svg> The digital twin</div><div class="d">Derived from the same photo: cool duotone, paneling, lit eyes, corner brackets. The AI's identity throughout the chat. Ringed in cyan-blue.</div></div>
+        </div>
+      </div>
+
+      <h3 class="block-title">Brand mark</h3>
+      <p class="lead-note">Two discs sharing an axis — one solid (the human), one outlined with a yellow node (the twin). One identity, two states. Crisp and geometric; never illustrative.</p>
+      <div class="well">
+        <span class="cap">On surfaces</span>
+        <span style="width:64px;height:64px;border-radius:12px;background:var(--surface-sunken);border:1px solid var(--border-strong);display:flex;align-items:center;justify-content:center">
+          <svg width="36" height="36" viewBox="0 0 24 24" fill="none"><circle cx="9.5" cy="13" r="5" fill="var(--blue-strong)"/><circle cx="15.5" cy="13" r="5" stroke="var(--blue-strong)" stroke-width="1.6"/><circle cx="15.5" cy="13" r="1.4" fill="var(--yellow-strong)"/></svg>
+        </span>
+        <span style="display:flex;align-items:center;gap:12px">
+          <svg width="34" height="34" viewBox="0 0 24 24" fill="none"><circle cx="9.5" cy="13" r="5" fill="var(--blue-strong)"/><circle cx="15.5" cy="13" r="5" stroke="var(--blue-strong)" stroke-width="1.6"/><circle cx="15.5" cy="13" r="1.4" fill="var(--yellow-strong)"/></svg>
+          <span style="font-family:var(--font-display);font-weight:600;font-size:32px">Avatar</span>
+        </span>
+      </div>
+      <div class="callout" style="margin-top:20px">
+        <svg class="icon"><use href="#i-tool"/></svg>
+        <div>The twin image is generated programmatically from the owner's photo (<span class="spec-code">pic.jpg</span>) so any site owner gets a matching synthetic twin. Treatment: cool navy→cyan duotone, ~20-band posterise, scanlines, paneling seams, eye glow, HUD brackets. Two crops ship: <span class="spec-code">avatar-robot.png</span> (square, framed) and <span class="spec-code">avatar-robot-round.png</span> (for circular chat avatars).</div>
+      </div>
+    </section>
+
+    <!-- ICONS -->
+    <section class="section" id="icons">
+      <div class="sec-head">
+        <span class="eyebrow">03 — Identity</span>
+        <h2>Iconography</h2>
+        <p>One coherent set: thin 1.6px strokes, round joins, a 24px grid, slightly geometric. Drawn for this product's exact needs — nothing generic, nothing decorative. Ships as <span class="spec-code">icons.svg</span>.</p>
+      </div>
+      <div class="icon-grid" id="iconGrid"></div>
+    </section>
+
+    <!-- COMPONENTS -->
+    <section class="section" id="components">
+      <div class="sec-head">
+        <span class="eyebrow">04 — Components</span>
+        <h2>Component library</h2>
+        <p>Build-ready and themed. Everything here is a class in <span class="spec-code">components.css</span> — no inline styling required to assemble a screen.</p>
+      </div>
+
+      <h3 class="block-title">Buttons</h3>
+      <div class="well">
+        <span class="cap">Purple = primary action only · blue = key secondary · neutral = the rest</span>
+        <button class="btn btn--primary"><svg class="icon icon--sm"><use href="#i-send"/></svg> Submit</button>
+        <button class="btn btn--blue">View curriculum</button>
+        <button class="btn btn--secondary"><svg class="icon icon--sm"><use href="#i-check"/></svg> Mark resolved</button>
+        <button class="btn btn--ghost"><svg class="icon icon--sm"><use href="#i-reset"/></svg> Reset</button>
+        <button class="btn-send"><svg class="icon"><use href="#i-send"/></svg></button>
+      </div>
+
+      <h3 class="block-title">Inputs, switch &amp; keys</h3>
+      <div class="well">
+        <span class="cap">Focus rings are yellow — the spark</span>
+        <label class="name-field"><svg class="icon icon--sm" style="color:var(--text-faint)"><use href="#i-visitor"/></svg><input type="text" value="Jordan M." style="width:120px"></label>
+        <label class="switch"><input type="checkbox" checked><span class="track"><span class="thumb"></span></span><span class="switch-label">Keep chat</span></label>
+        <span style="display:inline-flex;gap:6px;align-items:center"><span class="kbd">Enter</span><span class="kbd">Shift</span><span class="kbd">↵</span></span>
+      </div>
+
+      <h3 class="block-title">Badges &amp; status</h3>
+      <div class="well">
+        <span class="badge"><svg class="icon" style="width:12px;height:12px"><use href="#i-clock"/></svg> Read</span>
+        <span class="badge badge--blue">Unread · 5</span>
+        <span class="badge badge--attention"><svg class="icon" style="width:11px;height:11px"><use href="#i-spark"/></svg> Needs you</span>
+        <span class="badge badge--dot"></span>
+        <span class="badge badge--dot is-attention"></span>
+        <span class="instant-tag">instant · Q2</span>
+        <span class="tool-status is-done"><svg class="icon"><use href="#i-check"/></svg> faq_tool · returned</span>
+      </div>
+    </section>
+
+    <!-- THE THREE ROLES -->
+    <section class="section" id="roles">
+      <div class="sec-head">
+        <span class="eyebrow">04 — Components</span>
+        <h2>The three roles</h2>
+        <p>The conversation carries three voices and they must never be confused. Each has a distinct avatar, alignment and treatment — and the human's interjection is deliberately a designed event.</p>
+      </div>
+      <div class="well col" style="gap:22px;background:var(--surface-0)">
+        <span class="cap">Live components — rendered from <code style="font-family:var(--font-mono)">.msg--visitor / .msg--avatar / .msg--human</code></span>
+
+        <div class="msg msg--visitor">
+          <span class="avatar-initials">JM</span>
+          <div class="msg-body"><div class="msg-meta"><span class="msg-time">2:41 PM</span></div>
+            <div class="bubble"><p>Which of your courses actually covers RAG?</p></div></div>
+        </div>
+
+        <div class="msg msg--avatar">
+          <div class="avatar avatar-twin" style="background-image:url('assets/avatar-robot-round.png')"></div>
+          <div class="msg-body"><div class="msg-meta"><span class="msg-name">Avatar</span><span class="msg-time">2:41 PM</span></div>
+            <div class="tool-status is-done"><svg class="icon"><use href="#i-check"/></svg> faq_tool · curriculum</div>
+            <div class="bubble"><p>The cleanest path is the <strong>Agentic AI Engineering</strong> course. Ed wrote a full <a href="#">recommended curriculum</a> too.</p></div></div>
+        </div>
+
+        <div class="msg msg--human">
+          <div class="avatar avatar-human" style="background-image:url('assets/avatar-human.png')"><span class="spark-badge"><svg class="icon"><use href="#i-spark"/></svg></span></div>
+          <div class="msg-body"><div class="msg-meta"><span class="human-tag"><svg class="icon"><use href="#i-live"/></svg> The human · live</span><span class="msg-time">2:46 PM</span></div>
+            <div class="bubble"><p>Hey — it's actually me jumping in. Does Thursday 2pm ET work?</p></div></div>
+        </div>
+      </div>
+      <div class="grid cols-3" style="margin-top:20px">
+        <div class="panel"><div style="font-weight:700;margin-bottom:6px">Visitor</div><p class="lead-note" style="margin:0;font-size:13px">Right-aligned · initials token · neutral bubble with a squared inner corner.</p></div>
+        <div class="panel"><div style="font-weight:700;margin-bottom:6px;color:var(--role-avatar)">Avatar</div><p class="lead-note" style="margin:0;font-size:13px">Left · twin photo · named "Avatar" · tool-status lines in mono above the bubble.</p></div>
+        <div class="panel"><div style="font-weight:700;margin-bottom:6px;color:var(--yellow-ink)">Human</div><p class="lead-note" style="margin:0;font-size:13px">Left · real photo, yellow ring + spark · tinted bubble + glow · <strong>no name, ever</strong>.</p></div>
+      </div>
+      <div class="callout warn" style="margin-top:20px">
+        <svg class="icon"><use href="#i-spark"/></svg>
+        <div><strong>The human is anonymous by design.</strong> Their bubble shows the photo and a name-free "live" tag — never a hardcoded name — so any owner can reuse the platform. The distinction is carried entirely by image, ring, tint and glow, not text.</div>
+      </div>
+    </section>
+
+    <!-- VISITOR SCREEN -->
+    <section class="section" id="visitor">
+      <div class="sec-head">
+        <span class="eyebrow">05 — Screens &amp; UX</span>
+        <h2>Visitor chat</h2>
+        <p>A refined instant-message experience. An editorial hero, a focused composer that always holds focus, and the three-way conversation playing out in a centred column.</p>
+      </div>
+      <div class="screen">
+        <div class="bar"><span class="lights"><i></i><i></i><i></i></span><span class="url">edwarddonner.com</span><span style="margin-left:auto"><a class="chip" href="mockups/Visitor%20Chat.html" target="_blank" style="font-size:12px">Open full <svg class="icon" style="width:13px;height:13px"><use href="#i-external"/></svg></a></span></div>
+        <div class="frame-wrap"><iframe data-screen src="mockups/Visitor%20Chat.html" title="Visitor chat" scrolling="no"></iframe></div>
+      </div>
+      <div class="grid cols-2" style="margin-top:24px">
+        <ul class="dot-list">
+          <li><strong>Name &amp; Keep chat</strong> sit quietly in the top bar. Keep-chat defaults on and restores the thread from a cookie's <code style="font-family:var(--font-mono);font-size:12px">conversation_id</code>.</li>
+          <li><strong>Composer always wins focus</strong> — on load and after every send, by click or Enter.</li>
+        </ul>
+        <ul class="dot-list yellow">
+          <li><strong>Streaming replies</strong> via SSE, with tool use shown in small mono as it happens.</li>
+          <li><strong>The human's message</strong> appears as its own bubble — the designed moment, surfaced by the 10s/60s poll.</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ADMIN SCREEN -->
+    <section class="section" id="admin">
+      <div class="sec-head">
+        <span class="eyebrow">05 — Screens &amp; UX</span>
+        <h2>Admin dashboard</h2>
+        <p>An inbox the owner can move through at speed. Unread and needs-you states are unmistakable; arrow keys move between threads; Enter sends, Shift+Enter for multi-line.</p>
+      </div>
+      <div class="screen">
+        <div class="bar"><span class="lights"><i></i><i></i><i></i></span><span class="url">edwarddonner.com/admin</span><span style="margin-left:auto"><a class="chip" href="mockups/Admin%20Dashboard.html" target="_blank" style="font-size:12px">Open full <svg class="icon" style="width:13px;height:13px"><use href="#i-external"/></svg></a></span></div>
+        <div class="frame-wrap"><iframe data-screen src="mockups/Admin%20Dashboard.html" title="Admin dashboard" scrolling="no"></iframe></div>
+      </div>
+      <div class="grid cols-2" style="margin-top:24px">
+        <ul class="dot-list">
+          <li><strong>Most recent on top.</strong> Each row: initials, name, timestamp, preview. Unread rows are brighter and carry a blue dot.</li>
+          <li><strong>Needs-you</strong> threads (a <code style="font-family:var(--font-mono);font-size:12px">push_tool</code> fired) glow yellow and tag "Needs you" until opened.</li>
+        </ul>
+        <ul class="dot-list yellow">
+          <li><strong>Posting as you</strong> is explicit — the owner is reminded the visitor sees only their photo, no name, and the Avatar won't react.</li>
+          <li><strong>Keyboard-first:</strong> ↑ ↓ between threads, Enter to send, Shift+Enter for a new line.</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- FLOWS -->
+    <section class="section" id="flows">
+      <div class="sec-head">
+        <span class="eyebrow">05 — Screens &amp; UX</span>
+        <h2>Flows &amp; behaviour</h2>
+        <p>The interaction contracts the build must honour — the parts of the experience that don't show up in a static screenshot.</p>
+      </div>
+
+      <h3 class="block-title">Visitor — a question answered</h3>
+      <div class="flow panel" style="padding:6px 24px">
+        <div class="step"><span class="n"></span><div class="b"><div class="h">Land &amp; focus</div><div class="d">Page opens, composer takes focus. If Keep-chat + a stored <code>conversation_id</code> exist, the prior thread is fetched and restored.</div></div></div>
+        <div class="step"><span class="n"></span><div class="b"><div class="h">Ask</div><div class="d">Visitor sends a message (initials bubble). A <code>Qn</code> shortcut (e.g. <code>Q2</code>) skips the model and returns the FAQ answer instantly, tagged <span class="instant-tag">instant · Q2</span>.</div></div></div>
+        <div class="step"><span class="n"></span><div class="b"><div class="h">Stream</div><div class="d">The Avatar streams its reply over SSE. Tool calls (<code>faq_tool</code>, <code>push_tool</code>) render live in small mono, then collapse to a done state.</div></div></div>
+        <div class="step"><span class="n"></span><div class="b"><div class="h">Re-focus</div><div class="d">On completion the composer regains focus, ready for the next message.</div></div></div>
+      </div>
+
+      <h3 class="block-title">Contact capture &amp; human-in-the-loop</h3>
+      <div class="flow panel" style="padding:6px 24px">
+        <div class="step"><span class="n"></span><div class="b"><div class="h">Intent to connect</div><div class="d">Visitor wants to reach the human. The Avatar asks for an email and fires <code>push_tool</code>, telling the visitor it has notified the human.</div></div></div>
+        <div class="step"><span class="n"></span><div class="b"><div class="h">Flag raised</div><div class="d">The message row is marked <code>needs_attention</code> and unread. In admin it glows yellow and sorts to the owner's attention.</div></div></div>
+        <div class="step"><span class="n"></span><div class="b"><div class="h">Human replies</div><div class="d">The owner posts from admin. The message is inserted into the thread as the <strong>human</strong> role — photo, no name. The Avatar does <em>not</em> react to it.</div></div></div>
+        <div class="step"><span class="n"></span><div class="b"><div class="h">Visitor sees it</div><div class="d">The visitor's open page is polling (every 10s, easing to 60s after 5 quiet minutes) and surfaces the human's bubble — the designed moment.</div></div></div>
+      </div>
+
+      <h3 class="block-title">States to design for</h3>
+      <table class="spec">
+        <thead><tr><th>Surface</th><th>States</th></tr></thead>
+        <tbody>
+          <tr><td>Conversation row</td><td>read · unread · needs-you · active/selected · hover</td></tr>
+          <tr><td>Message</td><td>visitor · avatar · avatar+tool · avatar+instant · human</td></tr>
+          <tr><td>Composer</td><td>empty (focused) · typing · sending · disabled</td></tr>
+          <tr><td>Stream</td><td>thinking · tool-calling · tool-returned · typing · complete</td></tr>
+          <tr><td>Session</td><td>fresh · restored-from-cookie · reset</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- VOICE -->
+    <section class="section" id="voice">
+      <div class="sec-head">
+        <span class="eyebrow">05 — Screens &amp; UX</span>
+        <h2>Voice &amp; tone</h2>
+        <p>The Avatar speaks as a warm, sharp, professional twin — engaging a potential client or employer, never a generic assistant. The interface around it stays quiet and precise.</p>
+      </div>
+      <div class="grid cols-2">
+        <div class="panel">
+          <div class="eyebrow" style="margin-bottom:12px;color:var(--positive)">Do</div>
+          <ul class="dot-list">
+            <li>Speak in the first person as the twin: "I built…", "Ed wrote a full curriculum".</li>
+            <li>Be concise and confident; use light markdown emphasis and real links.</li>
+            <li>When you don't know, say so and record the question for the human.</li>
+          </ul>
+        </div>
+        <div class="panel">
+          <div class="eyebrow" style="margin-bottom:12px;color:var(--danger)">Don't</div>
+          <ul class="dot-list yellow">
+            <li>No "As an AI language model…", no hedging boilerplate, no emoji.</li>
+            <li>Don't invent answers — use the tool and defer to the human.</li>
+            <li>Interface copy never competes with the conversation. Labels are mono, terse, lower-key.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- HANDOFF -->
+    <section class="section" id="handoff">
+      <div class="sec-head">
+        <span class="eyebrow">06 — Build</span>
+        <h2>Handoff &amp; tokens</h2>
+        <p>Everything needed to build the real thing. The CSS files are the contract; <span class="spec-code">SKILL.md</span> is the brief for Claude Code.</p>
+      </div>
+      <table class="spec">
+        <thead><tr><th>File</th><th>What it is</th></tr></thead>
+        <tbody>
+          <tr><td>tokens.css</td><td>All design tokens — dark + light themes, type scale, spacing, radius, motion. Single source of truth.</td></tr>
+          <tr><td>components.css</td><td>Build-ready component classes: buttons, fields, switch, badges, avatars, the three bubbles, tool-status, composer, inbox rows.</td></tr>
+          <tr><td>icons.svg</td><td>The full icon sprite. <code>&lt;use href="icons.svg#i-…"&gt;</code>, inherits <code>currentColor</code>.</td></tr>
+          <tr><td>assets/avatar-*.png</td><td>Human crop + synthetic twin (square &amp; round). Regenerate per-owner from <code>pic.jpg</code>.</td></tr>
+          <tr><td>mockups/*.html</td><td>Reference hi-fi screens for visitor &amp; admin, in both themes.</td></tr>
+          <tr><td>SKILL.md</td><td>The build brief: how to apply this system, screen specs, behaviour, acceptance checks.</td></tr>
+          <tr><td>docs/*.md</td><td>UX flows, component specs, and the avatar-generation recipe in depth.</td></tr>
+        </tbody>
+      </table>
+      <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:24px">
+        <a class="btn btn--blue" href="mockups/Visitor%20Chat.html" target="_blank"><svg class="icon icon--sm"><use href="#i-external"/></svg> Visitor mockup</a>
+        <a class="btn btn--blue" href="mockups/Admin%20Dashboard.html" target="_blank"><svg class="icon icon--sm"><use href="#i-external"/></svg> Admin mockup</a>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<button class="theme-fab" id="themeToggle">
+  <svg class="icon icon--sm theme-moon"><use href="#i-moon"/></svg>
+  <svg class="icon icon--sm theme-sun" style="display:none"><use href="#i-sun"/></svg>
+  <span class="lbl-txt">Dark</span>
+</button>
+
+<script>
+  const root = document.documentElement;
+  const saved = localStorage.getItem('avatar-theme'); if (saved) root.setAttribute('data-theme', saved);
+  function syncTheme(){ const dark = root.getAttribute('data-theme')==='dark';
+    document.querySelector('.theme-moon').style.display = dark?'':'none';
+    document.querySelector('.theme-sun').style.display = dark?'none':'';
+    document.querySelector('.lbl-txt').textContent = dark?'Dark':'Light'; }
+  syncTheme();
+  document.getElementById('themeToggle').addEventListener('click', ()=>{
+    const next = root.getAttribute('data-theme')==='dark'?'light':'dark';
+    root.setAttribute('data-theme', next); localStorage.setItem('avatar-theme', next); syncTheme();
+  });
+
+  // Build the icon catalogue
+  const icons = ['i-send','i-reset','i-keep','i-visitor','i-avatar','i-spark','i-bell','i-inbox','i-search','i-sliders','i-sun','i-moon','i-check','i-check2','i-dot','i-lock','i-mail','i-chev-up','i-chev-down','i-chev-right','i-enter','i-tool','i-copy','i-close','i-menu','i-external','i-clock','i-shield','i-edit','i-arrow-right','i-eye','i-live'];
+  const grid = document.getElementById('iconGrid');
+  grid.innerHTML = icons.map(id=>`<div class="icon-cell"><svg class="icon"><use href="#${id}"/></svg><span class="nm">${id.replace('i-','')}</span></div>`).join('');
+
+  // Scale embedded screen iframes to fit their frame
+  function scaleScreens(){
+    document.querySelectorAll('.frame-wrap').forEach(w=>{
+      const f = w.querySelector('iframe[data-screen]');
+      if(!f) return; const s = w.clientWidth/1280; f.style.transform = `scale(${s})`;
+      w.style.height = (800*s)+'px';
+    });
+  }
+  window.addEventListener('resize', scaleScreens);
+  window.addEventListener('load', scaleScreens); scaleScreens();
+</script>
+</body>
+</html>

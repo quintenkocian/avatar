@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Avatar — Visitor Chat</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:ital,wght@0,400;0,500;0,600;0,700;1,500&family=JetBrains+Mono:wght@400;500&family=Newsreader:ital,opsz,wght@0,18..72,400;0,18..72,500;0,18..72,600;1,18..72,400;1,18..72,500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../tokens.css">
+<link rel="stylesheet" href="../components.css">
+<style>
+  html, body { height: 100%; }
+  body { display: flex; flex-direction: column; overflow: hidden; }
+
+  /* ---- Top bar ---- */
+  .topbar {
+    display: flex; align-items: center; justify-content: space-between; gap: var(--space-4);
+    height: var(--header-h); padding: 0 var(--space-6); flex: none;
+    border-bottom: 1px solid var(--border); background: var(--surface-1);
+    position: relative; z-index: 5;
+  }
+  .brand { display: flex; align-items: center; gap: var(--space-3); }
+  .brand-mark { width: 36px; height: 36px; flex: none; border-radius: var(--radius-md);
+    background: var(--surface-sunken); border: 1px solid var(--border-strong);
+    display: flex; align-items: center; justify-content: center; }
+  .brand-name { font-family: var(--font-display); font-weight: 600; font-size: 1.45rem;
+    letter-spacing: -0.01em; line-height: 1; }
+  .brand-sub { font-size: var(--text-2xs); color: var(--text-faint); font-family: var(--font-mono);
+    letter-spacing: var(--tracking-wide); text-transform: uppercase; margin-top: 3px; white-space: nowrap; }
+  .switch-label { white-space: nowrap; }
+  .topbar-right { display: flex; align-items: center; gap: var(--space-3); }
+  .icon-btn { width: 38px; height: 38px; border-radius: var(--radius-md); border: 1px solid var(--border);
+    background: var(--surface-1); color: var(--text-muted); display: inline-flex; align-items: center;
+    justify-content: center; cursor: pointer; transition: all var(--dur) var(--ease-out); }
+  .icon-btn:hover { background: var(--surface-2); color: var(--text); border-color: var(--border-strong); }
+  .divider-v { width: 1px; height: 26px; background: var(--border); }
+
+  /* ---- Chat region ---- */
+  .chat { flex: 1; min-height: 0; display: flex; flex-direction: column; position: relative; }
+  .chat::before { content: ""; position: absolute; inset: 0; pointer-events: none; opacity: 0.6; }
+  .convo { flex: 1; min-height: 0; overflow-y: auto; }
+  .convo-inner { max-width: var(--container-chat); margin: 0 auto; padding: var(--space-8) var(--space-6) var(--space-6);
+    display: flex; flex-direction: column; gap: var(--space-6); }
+
+  .day-sep { display: flex; align-items: center; gap: var(--space-4); margin: var(--space-1) 0; }
+  .day-sep::before, .day-sep::after { content: ""; height: 1px; background: var(--hairline); flex: 1; }
+  .day-sep span { font-family: var(--font-mono); font-size: var(--text-2xs); color: var(--text-faint);
+    letter-spacing: var(--tracking-wide); text-transform: uppercase; }
+
+  /* intro card */
+  .intro { text-align: center; padding: var(--space-4) 0 var(--space-2); display: flex;
+    flex-direction: column; align-items: center; gap: var(--space-4); }
+  .intro .avatar { width: 72px; height: 72px; }
+  .intro h1 { font-family: var(--font-display); font-weight: 500; font-size: var(--text-2xl);
+    line-height: 1.1; letter-spacing: -0.02em; margin: 0; max-width: 18ch; }
+  .intro h1 em { font-style: italic; color: var(--blue); }
+  .intro p { margin: 0; color: var(--text-muted); max-width: 46ch; font-size: var(--text-md); }
+  .suggest-row { display: flex; flex-wrap: wrap; gap: var(--space-2); justify-content: center; margin-top: var(--space-2); }
+
+  /* ---- Composer dock ---- */
+  .composer-dock { flex: none; padding: var(--space-4) var(--space-6) var(--space-6);
+    background: linear-gradient(0deg, var(--surface-0) 55%, transparent); }
+  .composer-wrap { max-width: var(--container-chat); margin: 0 auto; }
+  .composer-hint { display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap;
+    margin-top: var(--space-3); font-size: var(--text-xs); color: var(--text-faint); padding: 0 var(--space-1); }
+  .composer-hint .sep { width: 3px; height: 3px; border-radius: 50%; background: var(--text-faint); opacity: 0.5; }
+  .typing { display: inline-flex; align-items: center; gap: 7px; color: var(--text-muted);
+    font-size: var(--text-sm); padding: 0 var(--space-1) var(--space-2); }
+  .typing .dots span { display:inline-block; width:5px; height:5px; border-radius:50%; background: var(--role-avatar);
+    margin-right:3px; animation: blink 1.2s infinite ease-in-out; }
+  .typing .dots span:nth-child(2){ animation-delay:.2s } .typing .dots span:nth-child(3){ animation-delay:.4s }
+  @keyframes blink { 0%,60%,100%{opacity:.25} 30%{opacity:1} }
+</style>
+</head>
+<body class="hud-grid">
+
+<!-- ICON SPRITE (inlined for self-containment; canonical copy lives in icons.svg) -->
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none" aria-hidden="true"><defs><style>
+  symbol{fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+  symbol .fill{fill:currentColor;stroke:none}</style></defs>
+  <symbol id="i-send" viewBox="0 0 24 24"><path d="M12 20V5"/><path d="M6 11l6-6 6 6"/></symbol>
+  <symbol id="i-reset" viewBox="0 0 24 24"><path d="M19.5 12a7.5 7.5 0 1 1-2.2-5.3"/><path d="M19.7 4.5v3.3h-3.3"/></symbol>
+  <symbol id="i-visitor" viewBox="0 0 24 24"><circle cx="12" cy="8.5" r="3.3"/><path d="M5.5 19.2a6.6 6.6 0 0 1 13 0"/></symbol>
+  <symbol id="i-spark" viewBox="0 0 24 24"><path d="M12 3.2l1.9 6.5 6.5 1.9-6.5 1.9L12 20l-1.9-6.5L3.6 11.6l6.5-1.9z"/></symbol>
+  <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2.6v2.4M12 19v2.4M2.6 12h2.4M19 12h2.4M5.3 5.3l1.7 1.7M17 17l1.7 1.7M18.7 5.3L17 7M7 17l-1.7 1.7"/></symbol>
+  <symbol id="i-moon" viewBox="0 0 24 24"><path d="M20 14.2A8 8 0 0 1 9.8 4 8 8 0 1 0 20 14.2z"/></symbol>
+  <symbol id="i-tool" viewBox="0 0 24 24"><rect x="5" y="6" width="14" height="12" rx="2"/><path d="M8.5 10.5l2 1.5-2 1.5"/><path d="M12.5 14h3"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.5l4.2 4.3L19 7"/></symbol>
+  <symbol id="i-mail" viewBox="0 0 24 24"><rect x="3.5" y="5.5" width="17" height="13" rx="2"/><path d="M4 7l8 5.5L20 7"/></symbol>
+  <symbol id="i-arrow-right" viewBox="0 0 24 24"><path d="M4.5 12h14"/><path d="M13 6.5l5.5 5.5L13 17.5"/></symbol>
+  <symbol id="i-live" viewBox="0 0 24 24"><circle cx="12" cy="12" r="2.2" class="fill"/><path d="M7.8 7.8a6 6 0 0 0 0 8.4M16.2 16.2a6 6 0 0 0 0-8.4"/><path d="M5 5a9.5 9.5 0 0 0 0 14M19 19a9.5 9.5 0 0 0 0-14"/></symbol>
+</svg>
+
+<header class="topbar">
+  <div class="brand">
+    <span class="brand-mark" aria-hidden="true">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+        <circle cx="9.5" cy="13" r="5" fill="var(--blue-strong)"/>
+        <circle cx="15.5" cy="13" r="5" stroke="var(--blue-strong)" stroke-width="1.6"/>
+        <circle cx="15.5" cy="13" r="1.4" fill="var(--yellow-strong)"/>
+      </svg>
+    </span>
+    <div>
+      <div class="brand-name">Avatar</div>
+      <div class="brand-sub">Ed Donner · digital twin</div>
+    </div>
+  </div>
+  <div class="topbar-right">
+    <label class="name-field" title="Your name or initials">
+      <svg class="icon icon--sm" style="color:var(--text-faint)"><use href="#i-visitor"/></svg>
+      <input type="text" value="Jordan M." placeholder="Your name / initials" />
+    </label>
+    <label class="switch" title="Remember this conversation in your browser">
+      <input type="checkbox" checked>
+      <span class="track"><span class="thumb"></span></span>
+      <span class="switch-label">Keep chat</span>
+    </label>
+    <button class="btn btn--ghost btn--sm"><svg class="icon icon--sm"><use href="#i-reset"/></svg> Reset</button>
+    <span class="divider-v"></span>
+    <button class="icon-btn" id="themeToggle" title="Toggle light / dark">
+      <svg class="icon icon--sm theme-moon"><use href="#i-moon"/></svg>
+      <svg class="icon icon--sm theme-sun" style="display:none"><use href="#i-sun"/></svg>
+    </button>
+  </div>
+</header>
+
+<main class="chat">
+  <div class="convo scroll" id="convo">
+    <div class="convo-inner">
+
+      <!-- Intro -->
+      <div class="intro">
+        <div class="avatar avatar-twin" style="background-image:url('../assets/avatar-robot-round.png')"></div>
+        <h1>I'm Ed's <em>digital twin</em>.<br>Ask me anything — and the real Ed might just chime in.</h1>
+        <p>I know Ed's background, his AI engineering courses, and the curriculum. I can also put you in touch with him directly.</p>
+        <div class="suggest-row">
+          <button class="chip">Which course covers RAG?</button>
+          <button class="chip">Is it suitable for beginners?</button>
+          <button class="chip">Can I talk to the real Ed?</button>
+        </div>
+      </div>
+
+      <div class="day-sep"><span>Today · 2:41 PM</span></div>
+
+      <!-- Visitor -->
+      <div class="msg msg--visitor">
+        <span class="avatar-initials">JM</span>
+        <div class="msg-body">
+          <div class="msg-meta"><span class="msg-time">2:41 PM</span></div>
+          <div class="bubble"><p>Which of your courses actually covers RAG? Trying to figure out where to start.</p></div>
+        </div>
+      </div>
+
+      <!-- Avatar with tool use -->
+      <div class="msg msg--avatar">
+        <div class="avatar avatar-twin" style="background-image:url('../assets/avatar-robot-round.png')"></div>
+        <div class="msg-body">
+          <div class="msg-meta"><span class="msg-name">Avatar</span><span class="msg-time">2:41 PM</span></div>
+          <div class="tool-status is-done"><svg class="icon"><use href="#i-check"/></svg> Looked up the curriculum · faq_tool</div>
+          <div class="bubble">
+            <p>Great question. RAG shows up in a couple of places, but the cleanest path is the <strong>Agentic AI Engineering</strong> course — it builds RAG from first principles and then layers agents on top.</p>
+            <p>If you're mapping out an order, Ed wrote a full <a href="#">recommended curriculum here →</a></p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Visitor instant answer Q2 -->
+      <div class="msg msg--visitor">
+        <span class="avatar-initials">JM</span>
+        <div class="msg-body">
+          <div class="msg-meta"><span class="msg-time">2:42 PM</span></div>
+          <div class="bubble"><p>Q2</p></div>
+        </div>
+      </div>
+      <div class="msg msg--avatar">
+        <div class="avatar avatar-twin" style="background-image:url('../assets/avatar-robot-round.png')"></div>
+        <div class="msg-body">
+          <div class="msg-meta"><span class="msg-name">Avatar</span><span class="instant-tag">instant · Q2</span><span class="msg-time">2:42 PM</span></div>
+          <div class="bubble">
+            <p>Short answer: yes — but be honest with yourself about the curve. The courses are <strong>easiest with some Python foundations</strong>, but plenty of people complete everything with none.</p>
+            <p>If you're brand new, start with the AI Builder course and lean on the self-study guides. Go slow, add <code>print()</code> statements, and don't worry if it doesn't all land first time.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Contact capture -->
+      <div class="msg msg--visitor">
+        <span class="avatar-initials">JM</span>
+        <div class="msg-body">
+          <div class="msg-meta"><span class="msg-time">2:44 PM</span></div>
+          <div class="bubble"><p>This is really helpful. Any chance I could actually get 10 minutes with Ed?</p></div>
+        </div>
+      </div>
+      <div class="msg msg--avatar">
+        <div class="avatar avatar-twin" style="background-image:url('../assets/avatar-robot-round.png')"></div>
+        <div class="msg-body">
+          <div class="msg-meta"><span class="msg-name">Avatar</span><span class="msg-time">2:44 PM</span></div>
+          <div class="tool-status is-done"><svg class="icon"><use href="#i-mail"/></svg> Sent Ed a heads-up · push_tool</div>
+          <div class="bubble">
+            <p>Absolutely. Drop your email and I'll make sure Ed sees it — I've already pinged him that someone wants to connect.</p>
+          </div>
+        </div>
+      </div>
+      <div class="msg msg--visitor">
+        <span class="avatar-initials">JM</span>
+        <div class="msg-body">
+          <div class="msg-meta"><span class="msg-time">2:45 PM</span></div>
+          <div class="bubble"><p>jordan.m@example.com — thanks!</p></div>
+        </div>
+      </div>
+
+      <!-- THE HUMAN MOMENT -->
+      <div class="msg msg--human">
+        <div class="avatar avatar-human" style="background-image:url('../assets/avatar-human.png')">
+          <span class="spark-badge"><svg class="icon"><use href="#i-spark"/></svg></span>
+        </div>
+        <div class="msg-body">
+          <div class="msg-meta">
+            <span class="human-tag"><svg class="icon"><use href="#i-live"/></svg> The human · live</span>
+            <span class="msg-time">2:46 PM</span>
+          </div>
+          <div class="bubble">
+            <p>Hey Jordan — it's actually me, jumping in. Happy to chat properly. Does Thursday around 2pm ET work? I'll send a calendar link to that address.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="typing">
+        <span class="dots"><span></span><span></span><span></span></span> Avatar is typing
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Composer -->
+  <div class="composer-dock">
+    <div class="composer-wrap">
+      <div class="composer" id="composer">
+        <textarea rows="1" placeholder="Message Ed's twin…  (type “Q2” for an instant answer)" autofocus></textarea>
+        <button class="btn-send" title="Send (Enter)"><svg class="icon"><use href="#i-send"/></svg></button>
+      </div>
+      <div class="composer-hint">
+        <span><span class="kbd">Enter</span> to send</span>
+        <span class="sep"></span>
+        <span><span class="kbd">Shift</span>+<span class="kbd">Enter</span> for a new line</span>
+        <span class="sep"></span>
+        <span>Type <strong style="color:var(--blue-ink)">Qn</strong> for an instant FAQ answer</span>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script>
+  const root = document.documentElement;
+  const saved = localStorage.getItem('avatar-theme');
+  if (saved) root.setAttribute('data-theme', saved);
+  function syncThemeIcon(){
+    const dark = root.getAttribute('data-theme') === 'dark';
+    document.querySelector('.theme-moon').style.display = dark ? '' : 'none';
+    document.querySelector('.theme-sun').style.display = dark ? 'none' : '';
+  }
+  syncThemeIcon();
+  document.getElementById('themeToggle').addEventListener('click', () => {
+    const next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    root.setAttribute('data-theme', next);
+    localStorage.setItem('avatar-theme', next);
+    syncThemeIcon();
+  });
+  // keep conversation scrolled to the latest (the human moment) once images load
+  const convo = document.getElementById('convo');
+  function toLatest(){ convo.scrollTop = convo.scrollHeight; }
+  window.addEventListener('load', () => { toLatest(); setTimeout(toLatest, 250); });
+  toLatest();
+  // focus composer (per spec: field takes focus on load)
+  document.querySelector('.composer textarea').focus({ preventScroll: true });
+</script>
+</body>
+</html>
