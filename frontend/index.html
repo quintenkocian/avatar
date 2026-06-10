@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Avatar — Digital Twin</title>
+<meta name="description" content="Chat with a digital twin — and the real human might just chime in." />
+<link rel="icon" href="/avatar-robot-round.png" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:ital,wght@0,400;0,500;0,600;0,700;1,500&family=JetBrains+Mono:wght@400;500&family=Newsreader:ital,opsz,wght@0,18..72,400;0,18..72,500;0,18..72,600;1,18..72,400;1,18..72,500&display=swap" rel="stylesheet" />
+<!-- Apply the persisted theme before paint to avoid a flash (default dark). -->
+<script>
+  (function () {
+    try {
+      var t = localStorage.getItem("avatar-theme");
+      document.documentElement.setAttribute("data-theme", t === "light" ? "light" : "dark");
+    } catch (e) {
+      document.documentElement.setAttribute("data-theme", "dark");
+    }
+  })();
+</script>
+<link rel="stylesheet" href="/src/styles/tokens.css" />
+<link rel="stylesheet" href="/src/styles/components.css" />
+<link rel="stylesheet" href="/src/styles/visitor.css" />
+</head>
+<body class="hud-grid">
+
+<header class="topbar">
+  <div class="brand">
+    <span class="brand-mark" aria-hidden="true">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+        <circle cx="9.5" cy="13" r="5" fill="var(--blue-strong)" />
+        <circle cx="15.5" cy="13" r="5" stroke="var(--blue-strong)" stroke-width="1.6" />
+        <circle cx="15.5" cy="13" r="1.4" fill="var(--yellow-strong)" />
+      </svg>
+    </span>
+    <div>
+      <div class="brand-name">Avatar</div>
+      <div class="brand-sub" id="brandSub">digital twin</div>
+    </div>
+  </div>
+  <div class="topbar-right">
+    <label class="name-field" title="Your name or initials">
+      <svg class="icon icon--sm" style="color:var(--text-faint)"><use href="/icons.svg#i-visitor" /></svg>
+      <input type="text" id="nameInput" placeholder="Your name / initials" autocomplete="off" />
+    </label>
+    <label class="switch" title="Remember this conversation in your browser">
+      <input type="checkbox" id="keepChat" checked />
+      <span class="track"><span class="thumb"></span></span>
+      <span class="switch-label">Keep chat</span>
+    </label>
+    <button class="btn btn--ghost btn--sm" id="resetBtn" type="button">
+      <svg class="icon icon--sm"><use href="/icons.svg#i-reset" /></svg> Reset
+    </button>
+    <span class="divider-v"></span>
+    <button class="icon-btn" id="themeToggle" type="button" title="Toggle light / dark" aria-label="Toggle light / dark">
+      <svg class="icon icon--sm theme-moon"><use href="/icons.svg#i-moon" /></svg>
+      <svg class="icon icon--sm theme-sun" style="display:none"><use href="/icons.svg#i-sun" /></svg>
+    </button>
+  </div>
+</header>
+
+<!-- Mobile-only secondary bar: name + keep-chat (hidden on desktop) -->
+<div class="mobile-controls" id="mobileControls">
+  <label class="name-field" title="Your name or initials">
+    <svg class="icon icon--sm" style="color:var(--text-faint)"><use href="/icons.svg#i-visitor" /></svg>
+    <input type="text" id="nameInputMobile" placeholder="Your name / initials" autocomplete="off" />
+  </label>
+  <label class="switch" title="Remember this conversation in your browser">
+    <input type="checkbox" id="keepChatMobile" checked />
+    <span class="track"><span class="thumb"></span></span>
+    <span class="switch-label">Keep chat</span>
+  </label>
+  <button class="btn btn--ghost btn--sm" id="resetBtnMobile" type="button">
+    <svg class="icon icon--sm"><use href="/icons.svg#i-reset" /></svg> Reset
+  </button>
+</div>
+
+<main class="chat">
+  <div class="convo scroll" id="convo">
+    <div class="convo-inner" id="convoInner">
+
+      <!-- Intro / hero — shown only while the thread is empty -->
+      <div class="intro" id="intro">
+        <div class="avatar avatar-twin" id="introAvatar" style="background-image:url('/avatar-robot-round.png')"></div>
+        <h1 id="introHeading">
+          I'm a <em>digital twin</em>.<br />Ask me anything — and the real human might just chime in.
+        </h1>
+        <p id="introBlurb">
+          I know my owner's background and work, and I can put you in touch directly.
+        </p>
+        <div class="suggest-row" id="suggestRow">
+          <button class="chip" type="button" data-suggest="Tell me about your background.">Tell me about your background.</button>
+          <button class="chip" type="button" data-suggest="What do you work on?">What do you work on?</button>
+          <button class="chip" type="button" data-suggest="Can I talk to the real you?">Can I talk to the real you?</button>
+        </div>
+      </div>
+
+      <!-- Messages are injected here by the visitor screen logic. -->
+      <div class="thread-messages" id="threadMessages"></div>
+
+      <!-- Avatar "typing" indicator — toggled during streaming/thinking. -->
+      <div class="typing" id="typingIndicator" style="display:none">
+        <span class="dots"><span></span><span></span><span></span></span> Avatar is typing
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Composer dock -->
+  <div class="composer-dock">
+    <div class="composer-wrap">
+      <!-- Transient banners (rate-limit / error) appear here. -->
+      <div class="composer-banner" id="composerBanner" role="status" aria-live="polite" hidden></div>
+      <div class="composer" id="composer">
+        <textarea id="composerInput" rows="1" placeholder="Message the twin…  (type “Q2” for an instant answer)" autofocus></textarea>
+        <button class="btn-send" id="sendBtn" type="button" title="Send (Enter)" aria-label="Send">
+          <svg class="icon"><use href="/icons.svg#i-send" /></svg>
+        </button>
+      </div>
+      <div class="composer-hint">
+        <span><span class="kbd">Enter</span> to send</span>
+        <span class="sep"></span>
+        <span><span class="kbd">Shift</span>+<span class="kbd">Enter</span> for a new line</span>
+        <span class="sep"></span>
+        <span>Type <strong style="color:var(--blue-ink)">Qn</strong> for an instant FAQ answer</span>
+      </div>
+      <footer class="site-footer">
+        <span class="footer-by" id="footerBy">Avatar — digital twin</span>
+        <span class="footer-links">
+          <a id="footerLinkedin" class="footer-link" href="https://www.linkedin.com/in/quintenkocian/" target="_blank" rel="noopener noreferrer" title="LinkedIn" aria-label="LinkedIn">
+            <svg class="icon icon--sm"><use href="/icons.svg#i-linkedin" /></svg>
+          </a>
+          <a id="footerGithub" class="footer-link" href="https://github.com/quintenkocian" target="_blank" rel="noopener noreferrer" title="GitHub" aria-label="GitHub">
+            <svg class="icon icon--sm"><use href="/icons.svg#i-github" /></svg>
+          </a>
+        </span>
+      </footer>
+    </div>
+  </div>
+</main>
+
+<script type="module" src="/src/visitor/main.ts"></script>
+</body>
+</html>

@@ -1,0 +1,52 @@
+# Secrets — never bake into the image (values become Fly secrets / --env-file).
+.env
+.env.*
+!.env.example
+
+# Version control & CI
+.git
+.gitignore
+.github
+
+# Python virtualenvs, caches, and build artifacts
+**/.venv
+.venv
+**/__pycache__
+**/*.py[codz]
+**/.pytest_cache
+**/.mypy_cache
+**/.ruff_cache
+**/.coverage
+**/htmlcov
+
+# Node / Vite — reinstalled and rebuilt inside the image
+**/node_modules
+**/dist
+
+# Test screenshots / artifacts (cleaned up after testing)
+**/screenshots
+**/*.png.test
+test-results
+playwright-report
+
+# Logs and OS cruft
+*.log
+.DS_Store
+Thumbs.db
+
+# Editor / IDE
+.vscode
+.idea
+.claude
+
+# Docs and reference material not needed at runtime.
+# (Do NOT add a blanket `*.md` rule — knowledge/knowledge.md, knowledge/style.md
+#  etc. are read into the system prompt at runtime and must stay in the context.)
+reference
+docs
+design-system
+test
+SPEC.md
+DEPLOY.md
+CLAUDE.md
+LICENSE

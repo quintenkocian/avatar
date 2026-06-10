@@ -1,0 +1,70 @@
+<!--
+  Avatar — WordPress embed snippet.
+
+  Paste this into a WordPress "Custom HTML" block on the page where you want the
+  Avatar to appear. It:
+    • pins the app full-bleed (edge to edge) just below the site nav,
+    • overrides the theme's content-column max-width so it isn't boxed in,
+    • guards against horizontal overflow on narrow screens, and
+    • forwards ?q=N from the host page's URL into the iframe, so a link like
+      https://yoursite.com/avatar?q=2 opens the page AND immediately answers Q2.
+
+  Change TWO things for your own site:
+    1. BASE  — your app's subdomain (e.g. "https://avatar.yourdomain.com").
+               If you haven't set up a custom domain, use "https://<your-app>.fly.dev"
+               (note: the "Keep chat" cookie is third-party in a cross-site iframe;
+               a same-registrable-domain subdomain keeps it first-party — see DEPLOY.md).
+    2. title — the iframe `title` attribute (set it to your own name for accessibility).
+-->
+
+<style>
+  /* Break out of the theme's centered content column to go full-bleed. */
+  .avatar-embed {
+    position: relative;
+    left: 50%;
+    right: 50%;
+    margin-left: -50vw;
+    margin-right: -50vw;
+    width: 100vw;
+    max-width: 100vw;
+    /* Height: fill the viewport below a typical site nav. Tune 120px to your nav. */
+    height: calc(100vh - 120px);
+    min-height: 560px;
+    overflow: hidden;
+  }
+  .avatar-embed iframe {
+    display: block;
+    width: 100%;
+    height: 100%;
+    border: 0;
+  }
+  /* Stop the full-bleed block from introducing a horizontal scrollbar. */
+  html, body { overflow-x: hidden; }
+</style>
+
+<div class="avatar-embed">
+  <iframe
+    id="avatar-frame"
+    title="Quinten Kocian — Avatar"
+    src="about:blank"
+    allow="clipboard-write"
+    loading="lazy"
+    referrerpolicy="no-referrer-when-downgrade"></iframe>
+</div>
+
+<script>
+  (function () {
+    // 1. Your Avatar app's base URL (no trailing slash).
+    var BASE = "https://avatar.example.com";
+
+    // 2. Forward ?q=N from THIS page's URL into the iframe (single-question deep link).
+    var params = new URLSearchParams(window.location.search);
+    var q = params.get("q");
+    var src = BASE + "/";
+    if (q !== null && /^\d{1,2}$/.test(q)) {
+      src += "?q=" + encodeURIComponent(q);
+    }
+
+    document.getElementById("avatar-frame").src = src;
+  })();
+</script>

@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Avatar — Admin</title>
+<link rel="icon" href="/avatar-human.png" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:ital,wght@0,400;0,500;0,600;0,700;1,500&family=JetBrains+Mono:wght@400;500&family=Newsreader:ital,opsz,wght@0,18..72,400;0,18..72,500;0,18..72,600;1,18..72,400;1,18..72,500&display=swap" rel="stylesheet" />
+<!-- Apply the persisted theme before paint to avoid a flash (default dark). -->
+<script>
+  (function () {
+    try {
+      var t = localStorage.getItem("avatar-theme");
+      document.documentElement.setAttribute("data-theme", t === "light" ? "light" : "dark");
+    } catch (e) {
+      document.documentElement.setAttribute("data-theme", "dark");
+    }
+  })();
+</script>
+<link rel="stylesheet" href="/src/styles/tokens.css" />
+<link rel="stylesheet" href="/src/styles/components.css" />
+<link rel="stylesheet" href="/src/styles/admin.css" />
+</head>
+<body>
+
+<!-- =====================================================================
+     LOGIN GATE — shown until authenticated (adminMe). The screen logic
+     toggles #loginGate / #dashboard via the [hidden] attribute.
+     ===================================================================== -->
+<section class="login-gate" id="loginGate" hidden>
+  <div class="login-bg" aria-hidden="true"></div>
+  <form class="card login-card" id="loginForm" autocomplete="off">
+    <div class="login-brand">
+      <span class="brand-mark" aria-hidden="true">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+          <circle cx="9.5" cy="13" r="5" fill="var(--blue-strong)" />
+          <circle cx="15.5" cy="13" r="5" stroke="var(--blue-strong)" stroke-width="1.6" />
+          <circle cx="15.5" cy="13" r="1.4" fill="var(--yellow-strong)" />
+        </svg>
+      </span>
+      <div class="brand-name">Avatar</div>
+      <span class="admin-pill">Admin</span>
+    </div>
+    <div class="login-lock" aria-hidden="true">
+      <svg class="icon icon--lg"><use href="/icons.svg#i-lock" /></svg>
+    </div>
+    <h1 class="login-title">Owner sign-in</h1>
+    <p class="login-sub">Enter your admin password to open the conversation inbox.</p>
+    <div class="field">
+      <label class="label" for="passwordInput">Password</label>
+      <input class="input" id="passwordInput" type="password" placeholder="Admin password" autocomplete="current-password" />
+    </div>
+    <p class="login-error" id="loginError" role="alert" hidden></p>
+    <button class="btn btn--primary btn--lg login-submit" id="loginBtn" type="submit">
+      <svg class="icon icon--sm"><use href="/icons.svg#i-shield" /></svg> Sign in
+    </button>
+    <p class="secure-note login-note">
+      <svg class="icon icon--sm"><use href="/icons.svg#i-shield" /></svg>
+      Secured by a signed, http-only session. Visitors never see this page.
+    </p>
+  </form>
+</section>
+
+<!-- =====================================================================
+     DASHBOARD — shown once authenticated.
+     ===================================================================== -->
+<div class="dashboard" id="dashboard" hidden>
+
+  <header class="appbar">
+    <div class="brand">
+      <button class="icon-btn back-btn" id="mobileBackBtn" type="button" title="Back to inbox" aria-label="Back to inbox">
+        <svg class="icon icon--sm"><use href="/icons.svg#i-arrow-left" /></svg>
+      </button>
+      <span class="brand-mark" aria-hidden="true">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+          <circle cx="9.5" cy="13" r="5" fill="var(--blue-strong)" />
+          <circle cx="15.5" cy="13" r="5" stroke="var(--blue-strong)" stroke-width="1.6" />
+          <circle cx="15.5" cy="13" r="1.4" fill="var(--yellow-strong)" />
+        </svg>
+      </span>
+      <div class="brand-name">Avatar</div>
+      <span class="admin-pill">Admin</span>
+    </div>
+    <div class="appbar-right">
+      <span class="secure-note"><svg class="icon icon--sm"><use href="/icons.svg#i-shield" /></svg> Secure session</span>
+      <span class="divider-v"></span>
+      <button class="icon-btn" id="themeToggle" type="button" title="Toggle light / dark" aria-label="Toggle light / dark">
+        <svg class="icon icon--sm theme-moon"><use href="/icons.svg#i-moon" /></svg>
+        <svg class="icon icon--sm theme-sun" style="display:none"><use href="/icons.svg#i-sun" /></svg>
+      </button>
+      <div class="owner-chip">
+        <span id="ownerLabel">You</span>
+        <span class="avatar avatar-human" style="width:28px;height:28px;background-image:url('/avatar-human.png')"></span>
+      </div>
+      <button class="icon-btn" id="logoutBtn" type="button" title="Sign out" aria-label="Sign out">
+        <svg class="icon icon--sm"><use href="/icons.svg#i-logout" /></svg>
+      </button>
+    </div>
+  </header>
+
+  <div class="workspace" id="workspace">
+    <!-- Sidebar / inbox -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-head">
+        <div class="sidebar-title">
+          <h2><svg class="icon"><use href="/icons.svg#i-inbox" /></svg> Conversations</h2>
+          <span class="count-badge" id="convoCount">0</span>
+        </div>
+        <div class="search">
+          <svg class="icon icon--sm"><use href="/icons.svg#i-search" /></svg>
+          <input type="text" id="searchInput" placeholder="Search visitors &amp; messages…" autocomplete="off" />
+        </div>
+        <div class="filter-row" id="filterRow">
+          <span class="filter-chip is-on" data-filter="all">All</span>
+          <span class="filter-chip" data-filter="attention"><span class="dot-y"></span>Needs you</span>
+          <span class="filter-chip" data-filter="unread">Unread</span>
+        </div>
+      </div>
+      <div class="convo-list scroll" id="convoList" tabindex="0" role="listbox" aria-label="Conversations">
+        <!-- .convo-item rows injected by the admin screen logic. -->
+        <div class="list-empty" id="listEmpty" hidden>No conversations yet.</div>
+      </div>
+    </aside>
+
+    <!-- Main thread -->
+    <section class="main" id="main">
+      <!-- Empty state when no conversation is selected. -->
+      <div class="thread-empty" id="threadEmpty">
+        <svg class="icon icon--xl"><use href="/icons.svg#i-inbox" /></svg>
+        <p>Select a conversation to read the full thread.</p>
+      </div>
+
+      <!-- Active thread view (hidden until a conversation is opened). -->
+      <div class="thread-view" id="threadView" hidden>
+        <div class="thread-head">
+          <div class="thread-id">
+            <button class="icon-btn back-btn back-btn--thread" id="threadBackBtn" type="button" title="Back to inbox" aria-label="Back to inbox">
+              <svg class="icon icon--sm"><use href="/icons.svg#i-arrow-left" /></svg>
+            </button>
+            <span class="avatar-initials" id="threadInitials">?</span>
+            <div class="meta">
+              <span class="name" id="threadName">—</span>
+              <span class="sub" id="threadSub">—</span>
+            </div>
+          </div>
+          <div class="thread-actions">
+            <span class="attn-flag" id="attnFlag" hidden>
+              <svg class="icon"><use href="/icons.svg#i-spark" /></svg> Avatar asked for you
+            </span>
+            <button class="btn btn--secondary btn--sm" id="resolveBtn" type="button">
+              <svg class="icon icon--sm"><use href="/icons.svg#i-check" /></svg> Mark resolved
+            </button>
+          </div>
+        </div>
+
+        <div class="thread scroll" id="thread">
+          <div class="thread-inner" id="threadInner">
+            <!-- .msg rows injected by the admin screen logic. -->
+          </div>
+        </div>
+
+        <!-- Admin composer -->
+        <div class="admin-composer-dock">
+          <div class="admin-composer-wrap">
+            <div class="posting-as">
+              <span class="avatar avatar-human" style="background-image:url('/avatar-human.png')"></span>
+              Posting as <strong>you</strong> — the visitor sees this from your photo,
+              labelled <strong>live</strong>. The Avatar won't reply to it.
+            </div>
+            <div class="composer" id="adminComposer">
+              <textarea id="adminComposerInput" rows="1" placeholder="Write a message to the visitor…"></textarea>
+              <button class="btn-send" id="adminSendBtn" type="button" title="Send (Enter)" aria-label="Send">
+                <svg class="icon"><use href="/icons.svg#i-send" /></svg>
+              </button>
+            </div>
+            <div class="kbd-hints">
+              <span class="h">
+                <span class="kbd"><svg class="icon" style="width:12px;height:12px"><use href="/icons.svg#i-chev-up" /></svg></span><span class="kbd"><svg class="icon" style="width:12px;height:12px"><use href="/icons.svg#i-chev-down" /></svg></span>
+                move between conversations
+              </span>
+              <span class="h"><span class="kbd">Enter</span> send</span>
+              <span class="h"><span class="kbd">Shift</span>+<span class="kbd">Enter</span> new line</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+</div>
+
+<script type="module" src="/src/admin/main.ts"></script>
+</body>
+</html>
