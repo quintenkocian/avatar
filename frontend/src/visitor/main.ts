@@ -77,8 +77,6 @@ const composerBanner = el<HTMLDivElement>("composerBanner");
 const composerInput = el<HTMLTextAreaElement>("composerInput");
 const sendBtn = el<HTMLButtonElement>("sendBtn");
 
-const footerBy = el<HTMLSpanElement>("footerBy");
-
 // ---------------------------------------------------------------------------
 // App state
 // ---------------------------------------------------------------------------
@@ -189,8 +187,6 @@ function applyOwnerName(): void {
   introBlurb.textContent =
     `I know ${ownerName}'s background and work, and I can put you in touch with ` +
     `${ownerName} directly.`;
-  // Footer label.
-  footerBy.textContent = `${ownerName} · digital twin`;
   // Composer placeholder references the owner.
   composerInput.placeholder = `Message ${ownerName}'s twin…  (type "Q2" for an instant answer)`;
 }
