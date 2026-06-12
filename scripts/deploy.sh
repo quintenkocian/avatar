@@ -6,7 +6,7 @@
 # in sync with `app` in scripts/fly.toml). See DEPLOY.md.
 set -euo pipefail
 
-APP="avatar-quinten"
+APP="avatar-qk"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 cd "$REPO_ROOT"

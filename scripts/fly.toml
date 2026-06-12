@@ -2,8 +2,8 @@
 # NOTE: `app` and `primary_region` are placeholders — set your own globally-unique
 # Fly app name and a region near your Supabase DB (keep `app` in sync with APP in
 # scripts/deploy.sh). See DEPLOY.md.
-app = "avatar-quinten"
-primary_region = "sjc"               # closest Fly region to the Supabase us-west-2 (Oregon) DB
+app = "avatar-qk"
+primary_region = "iad"               # closest Fly region to the Supabase us-east-1 (N Virginia) DB
 
 [env]
   PORT = "8000"                      # matches the Dockerfile's uvicorn --port
