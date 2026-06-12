@@ -83,7 +83,13 @@ def test_admin_list_conversations(admin_client, fake_db):
 def test_admin_open_conversation_marks_read(admin_client, fake_db):
     fake_db.conversation = [
         {"id": 1, "role": "visitor", "content": "hi", "conversation_name": "Ada"},
-        {"id": 2, "role": "avatar", "content": "hello", "conversation_name": None},
+        {
+            "id": 2,
+            "role": "avatar",
+            "content": "hello",
+            "conversation_name": None,
+            "needs_attention": True,
+        },
     ]
     resp = admin_client.get("/admin/conversations/c1")
     assert resp.status_code == 200
@@ -91,8 +97,10 @@ def test_admin_open_conversation_marks_read(admin_client, fake_db):
     assert body["conversation_id"] == "c1"
     assert body["conversation_name"] == "Ada"
     assert len(body["messages"]) == 2
-    # Opening marks read + clears attention via open_conversation.
+    # Opening marks read via open_conversation but does NOT clear attention:
+    # the flag persists in the returned rows until "Mark resolved".
     assert "c1" in fake_db.opened
+    assert body["messages"][1]["needs_attention"] is True
 
 
 def test_admin_post_message_inserts_human_row(admin_client, fake_db):

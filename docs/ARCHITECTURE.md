@@ -119,14 +119,13 @@ with `run_in_threadpool`):
   `read=false AND role='visitor'` (visitor messages the owner hasn't seen), `needs_attention` is
   OR across rows. `initials` derived from conversation_name or "?".
 - `open_conversation(conversation_id) -> list[dict]` — **single round-trip**: PostgREST
-  `update(...).eq("conversation_id", id).execute()` setting `read=true, needs_attention=false`
-  for rows where currently `read=false OR needs_attention=true`, returning the updated rows; then
-  return the FULL conversation (one extra select is acceptable only if returning=representation
-  can't give all rows — prefer: do the update returning representation for changed rows, then a
-  single select of the whole thread; document whichever you implement). Net: opening marks read +
-  clears attention and yields the thread. Keep it to as few calls as the client allows; the SPEC's
-  intent is "no per-row chatter".
+  `update(...).eq("conversation_id", id).eq("read", false).execute()` setting `read=true`
+  for currently-unread rows, then return the FULL conversation (one extra select). Net: opening
+  marks read and yields the thread; it does NOT touch `needs_attention` — the attention flag
+  persists until the owner clicks "Mark resolved" (`mark_resolved`). Keep it to as few calls as
+  the client allows; the SPEC's intent is "no per-row chatter".
 - `mark_resolved(conversation_id) -> None` — set `needs_attention=false` for the conversation.
+  This is the ONLY path that clears attention.
 - `delete_conversation(conversation_id) -> None` — test cleanup helper.
 
 Use the supabase-py v2 sync client. Handle the deprecation warnings already seen (harmless).
@@ -261,8 +260,8 @@ All JSON unless noted. `conversation_id` is a client-minted UUID string.
 - `POST /admin/logout` → clear cookie, `{"ok":true}`.
 - `GET /admin/me` → `{"ok":true}` if authed (else 401). Frontend uses this to decide gate vs dash.
 - `GET /admin/conversations` → `{"conversations":[<summary>...]}` most-recent first (see db.list_conversations).
-- `GET /admin/conversations/{conversation_id}` → opens it: marks read + clears attention in one
-  round-trip, returns `{"conversation_id","conversation_name","messages":[...]}` (full thread).
+- `GET /admin/conversations/{conversation_id}` → opens it: marks read in one round-trip (attention
+  is left intact, cleared only by /resolve), returns `{"conversation_id","conversation_name","messages":[...]}` (full thread).
 - `POST /admin/conversations/{conversation_id}/message` body `{content}` → insert `human` row
   (read=true, needs_attention=false), return `{"message":<row>}`. **Avatar does NOT react.**
 - `POST /admin/conversations/{conversation_id}/resolve` → clear needs_attention, `{"ok":true}`.
