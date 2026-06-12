@@ -184,19 +184,21 @@ def list_conversations() -> list[dict]:
 
 
 def open_conversation(conversation_id: str) -> list[dict]:
-    """Open a thread for the owner: mark read + clear attention, return the thread.
+    """Open a thread for the owner: mark read, return the thread.
 
-    Implemented as a PostgREST ``update ... returning`` that flips ``read`` to true
-    and ``needs_attention`` to false for any row currently unread or flagged, then
-    one ``select`` of the full thread to return it in display order. This keeps it
-    to two round-trips with no per-row chatter (the SPEC's intent). If nothing
-    needed updating, the update is a cheap no-op match.
+    Implemented as a PostgREST ``update`` that flips ``read`` to true for any
+    currently-unread row, then one ``select`` of the full thread to return it in
+    display order. This keeps it to two round-trips with no per-row chatter (the
+    SPEC's intent). If nothing needed updating, the update is a cheap no-op match.
+
+    Opening does NOT touch ``needs_attention``: the attention flag persists until
+    the owner explicitly clicks "Mark resolved" (see ``mark_resolved``).
     """
     (
         _table()
-        .update({"read": True, "needs_attention": False})
+        .update({"read": True})
         .eq("conversation_id", conversation_id)
-        .or_("read.eq.false,needs_attention.eq.true")
+        .eq("read", False)
         .execute()
     )
     return get_conversation(conversation_id)

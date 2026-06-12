@@ -232,6 +232,10 @@ async def api_chat(body: ChatRequest) -> Response:
         # owner sees the avatar's contribution. Skip only if nothing at all came
         # back and we already reported an error.
         if full_text or not errored:
+            # Flag the owner if the Avatar pinged them via the push tool.
+            needs_attention = any(
+                tc.get("name") == agent.push_tool.name for tc in tool_calls
+            )
             try:
                 avatar_row = await run_in_threadpool(
                     db.insert_message,
@@ -240,6 +244,7 @@ async def api_chat(body: ChatRequest) -> Response:
                     full_text,
                     tool_calls=(tool_calls or None),
                     read=True,
+                    needs_attention=needs_attention,
                 )
                 yield _sse(
                     {"type": "done", "message_id": avatar_row["id"]}

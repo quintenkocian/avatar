@@ -154,6 +154,26 @@ def test_chat_stores_tool_calls(client, fake_db, monkeypatch):
     avatar_insert = [c for c in fake_db.calls if c[0] == "insert"][-1]
     tool_calls = avatar_insert[2]["tool_calls"]
     assert tool_calls and tool_calls[0]["name"] == "faq_tool"
+    # A non-push tool must NOT raise the needs-attention flag.
+    assert avatar_insert[2]["needs_attention"] is False
+
+
+def test_chat_push_tool_flags_needs_attention(client, fake_db, monkeypatch):
+    monkeypatch.setattr(
+        agent,
+        "stream_reply",
+        make_fake_stream(
+            tokens=["I've let them know"],
+            tools=[{"name": agent.push_tool.name, "detail": "wants to connect"}],
+        ),
+    )
+    client.post(
+        "/api/chat",
+        json={"conversation_id": "c1", "message": "can I get in touch?"},
+    )
+    # The avatar row is flagged so the admin "Needs You" indicator appears.
+    avatar_insert = [c for c in fake_db.calls if c[0] == "insert"][-1]
+    assert avatar_insert[2]["needs_attention"] is True
 
 
 def test_chat_rate_limited_before_any_model_call(client, fake_db, monkeypatch):

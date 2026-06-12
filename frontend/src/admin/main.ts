@@ -530,14 +530,14 @@ async function openConversation(conversationId: string): Promise<void> {
     return;
   }
 
-  // Opening cleared unread + needs_attention server-side; reflect locally so
-  // the inbox row updates without waiting for the next poll.
+  // Opening cleared unread server-side; reflect locally so the inbox row updates
+  // without waiting for the next poll. Attention is NOT cleared by opening — it
+  // persists until the owner clicks "Mark resolved".
   const summary = state.summaries.find(
     (s) => s.conversation_id === conversationId
   );
   if (summary) {
     summary.unread_count = 0;
-    summary.needs_attention = false;
   }
 
   loadThread(convo);
@@ -961,8 +961,8 @@ async function pollOpenThread(conversationId: string): Promise<void> {
   if (!summary) return;
 
   // If the inbox shows more messages than we've rendered, or fresh attention,
-  // re-open to pull the new rows. Opening also re-clears read/attention, which
-  // is correct: the owner is actively viewing this thread.
+  // re-open to pull the new rows. Opening re-clears read (the owner is actively
+  // viewing this thread) but leaves attention intact until "Mark resolved".
   const renderedCount = state.threadMessages.length;
   const hasNew =
     summary.message_count > renderedCount ||
@@ -997,10 +997,11 @@ async function pollOpenThread(conversationId: string): Promise<void> {
     if (atBottom) scrollToBottom(dom.thread, true);
   }
 
-  // Opening cleared attention server-side; reflect that locally.
-  state.threadNeedsAttention = false;
+  // Opening cleared unread server-side; reflect that locally. Attention persists
+  // until "Mark resolved", so derive it from the freshly-loaded rows.
+  state.threadNeedsAttention = convo.messages.some((m) => m.needs_attention);
   updateAttentionUI();
-  summary.needs_attention = false;
+  summary.needs_attention = state.threadNeedsAttention;
   summary.unread_count = 0;
   renderInbox();
 }
