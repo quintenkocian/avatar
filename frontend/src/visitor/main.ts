@@ -40,9 +40,24 @@ const COOKIE_NAME = "avatar_conversation";
 const COOKIE_DAYS = 365;
 const QN_RE = /^q(\d{1,2})$/i;
 
-const POLL_FAST_MS = 10_000;
-const POLL_SLOW_MS = 60_000;
-const POLL_SLOWDOWN_AFTER_MS = 5 * 60_000; // ease to slow cadence after 5 quiet min
+// Polling ladder (MORE.md): poll quickly right after activity, then back off
+// through tiers the longer the thread has been quiet. "Activity" = a send OR a
+// received human message. Each tier is { after this much idle → poll this often }.
+const POLL_TIERS: { afterMs: number; intervalMs: number }[] = [
+  { afterMs: 0, intervalMs: 10_000 }, // 10s after each message
+  { afterMs: 2 * 60_000, intervalMs: 30_000 }, // 30s after 2 quiet min
+  { afterMs: 10 * 60_000, intervalMs: 2 * 60_000 }, // 2m after 10 quiet min
+  { afterMs: 60 * 60_000, intervalMs: 5 * 60_000 }, // 5m after 1 quiet hour
+];
+
+/** The poll interval for a given idle duration (highest tier whose threshold is met). */
+function intervalForIdle(idleMs: number): number {
+  let chosen = POLL_TIERS[0].intervalMs;
+  for (const tier of POLL_TIERS) {
+    if (idleMs >= tier.afterMs) chosen = tier.intervalMs;
+  }
+  return chosen;
+}
 
 const RATE_LIMIT_COPY = "You're sending messages too quickly — give it a moment.";
 const GENERIC_ERROR_COPY = "Something went wrong. Please try again.";
@@ -94,7 +109,6 @@ let streamAbort: AbortController | null = null;
 
 // Polling cadence state.
 let pollTimer: number | null = null;
-let pollInterval = POLL_FAST_MS;
 let lastActivityAt = Date.now();
 let polling = false;
 
@@ -511,22 +525,20 @@ function appendInfoAvatarBubble(text: string): void {
 // ---------------------------------------------------------------------------
 
 function noteActivity(): void {
+  // Reset the idle clock and reschedule promptly at the base (fast) cadence.
   lastActivityAt = Date.now();
-  if (pollInterval !== POLL_FAST_MS) {
-    pollInterval = POLL_FAST_MS;
-    schedulePoll();
-  }
+  schedulePoll();
 }
 
 function resetPollCadence(): void {
   lastActivityAt = Date.now();
-  pollInterval = POLL_FAST_MS;
   schedulePoll();
 }
 
 function schedulePoll(): void {
   if (pollTimer != null) window.clearTimeout(pollTimer);
-  pollTimer = window.setTimeout(runPoll, pollInterval);
+  const interval = intervalForIdle(Date.now() - lastActivityAt);
+  pollTimer = window.setTimeout(runPoll, interval);
 }
 
 async function runPoll(): Promise<void> {
@@ -565,13 +577,7 @@ async function runPoll(): Promise<void> {
     }
   }
 
-  // Ease to the slow cadence after a quiet stretch.
-  if (
-    pollInterval === POLL_FAST_MS &&
-    Date.now() - lastActivityAt >= POLL_SLOWDOWN_AFTER_MS
-  ) {
-    pollInterval = POLL_SLOW_MS;
-  }
+  // Schedule the next tick at the cadence for the current idle duration.
   schedulePoll();
 }
 
@@ -615,23 +621,35 @@ function wireComposer(): void {
 }
 
 // ---------------------------------------------------------------------------
-// Deep link ?q=N — submit Q{N} on arrival, then strip the param.
+// Deep links — ?q=N submits Q{N} (instant FAQ); ?m=text submits free text.
+// Both are read from the URL, cleared via replaceState, then auto-submitted.
+// If both are present, ?q wins (an instant FAQ with no LLM call).
 // ---------------------------------------------------------------------------
 
 function consumeDeepLink(): void {
   const params = new URLSearchParams(window.location.search);
   const q = params.get("q");
-  if (q == null) return;
-  // Always clear the param from the URL so a refresh doesn't re-submit.
+  const m = params.get("m");
+  if (q == null && m == null) return;
+
+  // Always clear both params from the URL so a refresh doesn't re-submit.
   params.delete("q");
+  params.delete("m");
   const search = params.toString();
   const newUrl =
     window.location.pathname + (search ? `?${search}` : "") + window.location.hash;
   window.history.replaceState({}, "", newUrl);
 
-  const n = q.trim();
-  if (/^\d{1,2}$/.test(n)) {
-    void submitMessage(`Q${n}`);
+  // ?q=N wins when both are present.
+  if (q != null) {
+    const n = q.trim();
+    if (/^\d{1,2}$/.test(n)) void submitMessage(`Q${n}`);
+    return;
+  }
+  // ?m=free text — routed to the LLM like a normal message (non-empty only).
+  if (m != null) {
+    const text = m.trim();
+    if (text) void submitMessage(text);
   }
 }
 

@@ -1,44 +1,41 @@
-"""Tests for app.knowledge — FAQ lookups and prompt composition."""
+"""Tests for app.knowledge — FAQ formatting and prompt composition."""
 
 from __future__ import annotations
 
 from app import knowledge
 
 
-def test_faqs_loaded():
-    """FAQs load from faq.jsonl and are keyed by their integer number."""
-    assert knowledge.FAQS, "expected FAQs to load from faq.jsonl"
-    assert all(isinstance(row["faq"], int) for row in knowledge.FAQS)
-    first = knowledge.FAQS[0]["faq"]
-    assert knowledge.FAQ_BY_NUMBER[first]["faq"] == first
+def test_seed_faqs_loaded():
+    """Seed FAQs load from faq.jsonl and are keyed by their integer id."""
+    assert knowledge.SEED_FAQS, "expected seed FAQs to load from faq.jsonl"
+    assert all(isinstance(row["id"], int) for row in knowledge.SEED_FAQS)
+    first = knowledge.SEED_FAQS[0]["id"]
+    assert knowledge.SEED_FAQ_BY_ID[first]["id"] == first
+    # The on-disk routing phrase maps to the canonical `concise` key.
+    assert "concise" in knowledge.SEED_FAQS[0]
 
 
-def test_find_faq_known():
-    """find_faq returns a formatted Q+A block for a known number."""
-    n = knowledge.FAQS[0]["faq"]
-    block = knowledge.find_faq(n)
-    assert block is not None
-    assert f"Question {n}" in block
+def test_format_faq_answer():
+    """format_faq_answer returns a Q+A block for a row."""
+    row = knowledge.SEED_FAQS[0]
+    block = knowledge.format_faq_answer(row)
+    assert f"Question {row['id']}" in block
     assert "Answer" in block
-    assert knowledge.FAQ_BY_NUMBER[n]["answer"][:20] in block
+    assert row["answer"][:20] in block
 
 
-def test_find_faq_unknown():
-    assert knowledge.find_faq(9999) is None
+def test_seed_faq_lookup():
+    n = knowledge.SEED_FAQS[0]["id"]
+    assert knowledge.seed_faq(n)["id"] == n
+    assert knowledge.seed_faq(9999) is None
 
 
-def test_instant_answer_restates_question():
+def test_format_instant_restates_question():
     """The Qn instant reply restates the question, then gives the answer."""
-    n = knowledge.FAQS[0]["faq"]
-    row = knowledge.FAQ_BY_NUMBER[n]
-    md = knowledge.instant_answer_markdown(n)
-    assert md is not None
-    assert md.startswith(f"**Q{n}:** {row['question']}")
+    row = knowledge.SEED_FAQS[0]
+    md = knowledge.format_instant(row)
+    assert md.startswith(f"**Q{row['id']}:** {row['question']}")
     assert row["answer"] in md
-
-
-def test_instant_answer_unknown():
-    assert knowledge.instant_answer_markdown(9999) is None
 
 
 def test_build_system_prompt_uses_owner_name():
@@ -52,8 +49,30 @@ def test_build_system_prompt_uses_owner_name():
     # Tools are documented.
     assert "faq_tool" in prompt
     assert "push_tool" in prompt
-    # FAQ routing numbers are listed.
+    assert "fetch" in prompt
+    # FAQ routing numbers are listed, and the operating rules + job section.
     assert "FAQ routing" in prompt
+    assert "Operating rules" in prompt
+    assert "job" in prompt.lower()
+
+
+def test_build_system_prompt_uses_provided_faqs():
+    """A supplied FAQ list drives the routing block (DB source of truth)."""
+    faqs = [{"id": 7, "concise": "routing phrase seven", "question": "Q", "answer": "A"}]
+    prompt = knowledge.build_system_prompt("Owner", faqs)
+    assert "7. routing phrase seven" in prompt
+
+
+def test_build_system_prompt_additional_instructions_last():
+    """Additional instructions are appended LAST (cache-friendly, recency)."""
+    prompt = knowledge.build_system_prompt(
+        "Owner", additional_instructions="ALWAYS mention the newsletter."
+    )
+    assert "Additional instructions" in prompt
+    assert prompt.rstrip().endswith("ALWAYS mention the newsletter.")
+    # Empty instructions add no trailing section.
+    plain = knowledge.build_system_prompt("Owner", additional_instructions="  ")
+    assert "Additional instructions" not in plain
 
 
 def test_build_system_prompt_distinct_owner_names():
@@ -86,6 +105,19 @@ def test_build_user_task_appends_pending_visitor():
     assert task.rstrip().endswith("Visitor: a new question")
 
 
+def test_build_user_task_bounds_long_transcript():
+    """A very long transcript is trimmed to the most recent within budget."""
+    # Many large early messages, then a small final visitor line.
+    messages = [
+        {"role": "visitor", "content": "X" * 5000} for _ in range(20)
+    ]
+    messages.append({"role": "visitor", "content": "FINAL question"})
+    task = knowledge.build_user_task(messages, "Owner")
+    assert "FINAL question" in task  # latest is always kept
+    assert "omitted" in task  # truncation note present
+    assert len(task) < 20 * 5000  # genuinely trimmed
+
+
 def test_role_label_unknown_role():
     """An unexpected stored role falls back to a capitalized label."""
     assert knowledge._role_label("unknown_role", "Owner") == "Unknown_role"
@@ -99,7 +131,7 @@ def test_build_user_task_handles_missing_keys():
     assert "Visitor:" in task_no_content
 
 
-def test_load_faqs_skips_malformed(tmp_path):
+def test_load_seed_faqs_skips_malformed(tmp_path):
     """A malformed JSONL line is skipped, not fatal."""
     p = tmp_path / "faq.jsonl"
     p.write_text(
@@ -108,5 +140,6 @@ def test_load_faqs_skips_malformed(tmp_path):
         '{"faq": 2, "question": "Q2?", "answer": "A2.", "query": "q2"}\n',
         encoding="utf-8",
     )
-    rows = knowledge._load_faqs(p)
-    assert [r["faq"] for r in rows] == [1, 2]
+    rows = knowledge._load_seed_faqs(p)
+    assert [r["id"] for r in rows] == [1, 2]
+    assert rows[0]["concise"] == "q"

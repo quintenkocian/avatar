@@ -42,8 +42,13 @@ def main() -> int:
     remaining = 0
     for cid in ids:
         try:
-            db.delete_conversation(cid)
-            left = db.get_conversation(cid)
+            # Sweep both tables: a MORE archive spec may have moved a tracked
+            # conversation into `archive`. Deleting from both is safe (a no-op
+            # where the conversation isn't present).
+            db.delete_conversation(cid, table=db.TABLE)
+            db.delete_conversation(cid, table=db.ARCHIVE_TABLE)
+            left = db.get_conversation(cid, table=db.TABLE)
+            left += db.get_conversation(cid, table=db.ARCHIVE_TABLE)
             status = "ok" if not left else f"STILL HAS {len(left)} rows"
             if left:
                 remaining += 1

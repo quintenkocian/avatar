@@ -41,6 +41,8 @@ function toolLabel(name: string, detail?: string | null): { text: string; iconNa
       return { text: d ? `Looked up ${d}` : "Looked up the FAQ", iconName: "check" };
     case "push_tool":
       return { text: `Sent a heads-up`, iconName: "mail" };
+    case "fetch":
+      return { text: d ? `Read ${d}` : "Read the linked job posting", iconName: "globe" };
     default:
       return { text: d ? `${name} · ${d}` : name, iconName: "tool" };
   }

@@ -60,6 +60,14 @@ export interface AppConfig {
   owner_name: string;
 }
 
+/** A single editable FAQ row (Supabase-backed). */
+export interface FaqRow {
+  id: number;
+  concise: string;
+  question: string;
+  answer: string;
+}
+
 /** Result of POST /api/instant. */
 export type InstantResult =
   | {
@@ -414,4 +422,135 @@ export function adminResolve(conversationId: string): Promise<{ ok: boolean }> {
     `/admin/conversations/${encodeURIComponent(conversationId)}/resolve`,
     { method: "POST" }
   );
+}
+
+// ---------------------------------------------------------------------------
+// Admin API — MORE: archive, instructions, FAQ, export
+// ---------------------------------------------------------------------------
+
+/** POST /admin/conversations/{id}/archive — archive a whole conversation. */
+export function adminArchiveConversation(
+  conversationId: string
+): Promise<{ ok: boolean; moved: number }> {
+  return requestJson(
+    `/admin/conversations/${encodeURIComponent(conversationId)}/archive`,
+    { method: "POST" }
+  );
+}
+
+/** GET /admin/archive — archived inbox summaries + total. */
+export function adminListArchive(): Promise<{
+  conversations: ConversationSummary[];
+  total: number;
+}> {
+  return requestJson("/admin/archive");
+}
+
+/** GET /admin/archive/{id} — open an archived thread (read-only). */
+export function adminOpenArchive(conversationId: string): Promise<Conversation> {
+  return requestJson<Conversation>(
+    `/admin/archive/${encodeURIComponent(conversationId)}`
+  );
+}
+
+/** POST /admin/archive/{id}/restore — restore a whole archived conversation. */
+export function adminRestoreConversation(
+  conversationId: string
+): Promise<{ ok: boolean; moved: number }> {
+  return requestJson(
+    `/admin/archive/${encodeURIComponent(conversationId)}/restore`,
+    { method: "POST" }
+  );
+}
+
+/** POST /admin/archive-inactive — archive conversations idle for 72h+. */
+export function adminArchiveInactive(): Promise<{
+  ok: boolean;
+  archived: string[];
+  count: number;
+}> {
+  return requestJson("/admin/archive-inactive", { method: "POST" });
+}
+
+/** GET /admin/instructions — the admin's additional-instructions markdown. */
+export function adminGetInstructions(): Promise<{
+  additional_instructions: string;
+}> {
+  return requestJson("/admin/instructions");
+}
+
+/** PUT /admin/instructions — save the additional-instructions markdown. */
+export function adminPutInstructions(
+  text: string
+): Promise<{ additional_instructions: string }> {
+  return requestJson("/admin/instructions", {
+    method: "PUT",
+    headers: JSON_HEADERS,
+    body: JSON.stringify({ additional_instructions: text }),
+  });
+}
+
+/** GET /admin/faq — all FAQ rows + total. */
+export function adminListFaq(): Promise<{ faqs: FaqRow[]; total: number }> {
+  return requestJson("/admin/faq");
+}
+
+/** POST /admin/faq — create a FAQ row (id auto-assigned). */
+export async function adminCreateFaq(body: {
+  concise: string;
+  question: string;
+  answer: string;
+}): Promise<FaqRow> {
+  const data = await requestJson<{ faq: FaqRow }>("/admin/faq", {
+    method: "POST",
+    headers: JSON_HEADERS,
+    body: JSON.stringify(body),
+  });
+  return data.faq;
+}
+
+/** PUT /admin/faq/{id} — update a FAQ row. */
+export async function adminUpdateFaq(
+  id: number,
+  body: { concise: string; question: string; answer: string }
+): Promise<FaqRow> {
+  const data = await requestJson<{ faq: FaqRow }>(
+    `/admin/faq/${encodeURIComponent(String(id))}`,
+    {
+      method: "PUT",
+      headers: JSON_HEADERS,
+      body: JSON.stringify(body),
+    }
+  );
+  return data.faq;
+}
+
+/** DELETE /admin/faq/{id} — delete a FAQ row. */
+export function adminDeleteFaq(id: number): Promise<{ ok: boolean }> {
+  return requestJson(`/admin/faq/${encodeURIComponent(String(id))}`, {
+    method: "DELETE",
+  });
+}
+
+/**
+ * Download an admin export (JSONL) by fetching it with the session cookie and
+ * saving the blob, so a 401 surfaces as an error rather than a broken file.
+ */
+export async function adminDownload(
+  path: string,
+  filename: string
+): Promise<void> {
+  const res = await fetch(path, { credentials: "same-origin" });
+  if (!res.ok) {
+    throw new ApiError(res.status, `Download failed (${res.status})`);
+  }
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
 }

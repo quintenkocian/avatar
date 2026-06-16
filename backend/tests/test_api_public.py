@@ -53,7 +53,7 @@ def test_conversation_poll_passes_after_id(client, fake_db):
 
 
 def test_instant_known_qn_persists_two_rows(client, fake_db):
-    n = knowledge.FAQS[0]["faq"]
+    n = knowledge.SEED_FAQS[0]["id"]
     resp = client.post(
         "/api/instant",
         json={"conversation_id": "c1", "name": "Ada", "message": f"Q{n}"},
@@ -90,7 +90,7 @@ def test_instant_non_qn_returns_not_found(client, fake_db):
 
 def test_instant_rate_limited(client, fake_db, monkeypatch):
     monkeypatch.setattr(rate_limit, "check", lambda cid: False)
-    n = knowledge.FAQS[0]["faq"]
+    n = knowledge.SEED_FAQS[0]["id"]
     resp = client.post(
         "/api/instant", json={"conversation_id": "c1", "message": f"Q{n}"}
     )
@@ -264,7 +264,7 @@ def test_chat_clamped_text_is_sent_to_the_llm(client, fake_db, monkeypatch):
     """
     captured: dict[str, str] = {}
 
-    async def capturing_stream(task: str, owner_name: str):
+    async def capturing_stream(task: str, owner_name: str, system_prompt=None):
         captured["task"] = task
         yield {"type": "token", "text": "ok"}
 

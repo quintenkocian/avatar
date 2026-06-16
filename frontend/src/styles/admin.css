@@ -75,7 +75,85 @@ body { overflow: hidden; }
 /* ============================================================================
    DASHBOARD layout
    ========================================================================== */
-.dashboard { height: 100%; display: grid; grid-template-rows: var(--header-h) 1fr; }
+.dashboard { height: 100%; display: grid; grid-template-rows: var(--header-h) auto 1fr; }
+
+/* ---- Main nav tabs (Conversations | Archive | Instructions | FAQ) ---- */
+.admin-tabs {
+  display: flex; align-items: stretch; gap: var(--space-1);
+  padding: 0 var(--space-5); border-bottom: 1px solid var(--border);
+  background: var(--surface-1); overflow-x: auto; scrollbar-width: none;
+}
+.admin-tabs::-webkit-scrollbar { display: none; }
+.admin-tab {
+  display: inline-flex; align-items: center; gap: 7px; white-space: nowrap;
+  padding: 10px var(--space-3); border: none; background: none; cursor: pointer;
+  color: var(--text-faint); font-family: var(--font-sans); font-weight: 600;
+  font-size: var(--text-sm); border-bottom: 2px solid transparent; margin-bottom: -1px;
+  transition: color var(--dur) var(--ease-out), border-color var(--dur) var(--ease-out);
+}
+.admin-tab .icon { color: currentColor; }
+.admin-tab:hover { color: var(--text-muted); }
+.admin-tab.is-on { color: var(--blue-ink); border-bottom-color: var(--blue-strong); }
+.admin-tab:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--focus-ring); border-radius: var(--radius-sm); }
+
+/* ---- Tab body + panels ---- */
+.tab-body { min-height: 0; position: relative; }
+.tab-panel { height: 100%; min-height: 0; }
+.tab-panel .workspace { height: 100%; }
+.panel-scroll { overflow-y: auto; }
+
+/* ---- Sidebar tools (download / archive-idle) ---- */
+.sidebar-tools { display: flex; gap: var(--space-2); flex-wrap: wrap; }
+.sidebar-tools .btn { flex: 1 1 auto; justify-content: center; }
+
+/* ---- Archived flag ---- */
+.archived-flag {
+  display: inline-flex; align-items: center; gap: 6px; font-size: var(--text-xs); font-weight: 600;
+  color: var(--text-muted); background: var(--surface-2); border: 1px solid var(--border);
+  border-radius: var(--radius-pill); padding: 5px 11px;
+}
+.archived-flag .icon { width: 14px; height: 14px; color: var(--text-faint); }
+
+/* ---- Editor panels (Instructions + FAQ) ---- */
+.editor-wrap {
+  max-width: 760px; margin: 0 auto; padding: var(--space-6) var(--space-6) var(--space-8);
+  display: flex; flex-direction: column; gap: var(--space-4);
+}
+.editor-wrap--wide { max-width: 920px; }
+.editor-head h2 {
+  margin: 0 0 var(--space-2); font-family: var(--font-display); font-weight: 600;
+  font-size: var(--text-xl); display: flex; align-items: center; gap: var(--space-2);
+}
+.editor-head .icon { color: var(--blue); }
+.editor-head-row { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }
+.editor-sub { margin: 0; color: var(--text-muted); font-size: var(--text-sm); line-height: 1.5; }
+.editor-sub code {
+  font-family: var(--font-mono); font-size: 0.85em; background: var(--surface-sunken);
+  border: 1px solid var(--border); border-radius: var(--radius-xs); padding: 0.1em 0.35em;
+}
+.editor-textarea { min-height: 240px; resize: vertical; font-family: var(--font-mono); font-size: var(--text-sm); line-height: 1.55; }
+.editor-actions { display: flex; align-items: center; justify-content: flex-end; gap: var(--space-3); }
+.editor-status { font-size: var(--text-sm); color: var(--text-faint); margin-right: auto; }
+.editor-status.is-ok { color: var(--positive); }
+.editor-status.is-error { color: var(--danger); }
+
+/* ---- FAQ editor ---- */
+.faq-list { display: flex; flex-direction: column; gap: var(--space-4); }
+.faq-row {
+  display: flex; flex-direction: column; gap: var(--space-2);
+  padding: var(--space-4); border: 1px solid var(--border); border-radius: var(--radius-lg);
+  background: var(--surface-1);
+}
+.faq-row.is-new { border-color: var(--yellow-line); box-shadow: 0 0 0 3px var(--yellow-soft); }
+.faq-row-head { display: flex; align-items: center; gap: var(--space-2); }
+.faq-id {
+  font-family: var(--font-mono); font-size: var(--text-sm); font-weight: 600; color: var(--text-faint);
+  min-width: 2.4em; text-align: right;
+}
+.faq-concise { flex: 1; min-width: 0; }
+.faq-row-actions { display: flex; align-items: center; gap: var(--space-2); flex: none; }
+.faq-answer { resize: vertical; min-height: 64px; font-family: var(--font-mono); font-size: var(--text-sm); }
+.faq-row.is-dirty .faq-save { border-color: var(--blue-line); color: var(--blue-ink); }
 
 /* ---- App bar ---- */
 .appbar {

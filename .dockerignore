@@ -49,4 +49,9 @@ test
 SPEC.md
 DEPLOY.md
 CLAUDE.md
+MORE.md
 LICENSE
+
+# Local-only artifacts (DB backups, the standalone OG card)
+backups
+og-avatar.png

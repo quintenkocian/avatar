@@ -35,6 +35,20 @@ class AdminMessageRequest(BaseModel):
     content: str
 
 
+class InstructionsRequest(BaseModel):
+    """Body for ``PUT /admin/instructions``."""
+
+    additional_instructions: str = ""
+
+
+class FaqRequest(BaseModel):
+    """Body for creating/updating a FAQ row."""
+
+    concise: str = ""
+    question: str
+    answer: str
+
+
 # --- Response models ---------------------------------------------------------
 
 

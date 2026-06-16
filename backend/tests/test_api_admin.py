@@ -17,6 +17,19 @@ GUARDED_ROUTES = [
     ("get", "/admin/conversations/c1"),
     ("post", "/admin/conversations/c1/message"),
     ("post", "/admin/conversations/c1/resolve"),
+    ("post", "/admin/conversations/c1/archive"),
+    ("get", "/admin/archive"),
+    ("get", "/admin/archive/c1"),
+    ("post", "/admin/archive/c1/restore"),
+    ("post", "/admin/archive-inactive"),
+    ("get", "/admin/export/conversations"),
+    ("get", "/admin/export/archive"),
+    ("get", "/admin/instructions"),
+    ("put", "/admin/instructions"),
+    ("get", "/admin/faq"),
+    ("post", "/admin/faq"),
+    ("put", "/admin/faq/1"),
+    ("delete", "/admin/faq/1"),
 ]
 
 
@@ -26,6 +39,12 @@ def test_admin_routes_require_auth(client, fake_db, method, path):
     kwargs = {}
     if path.endswith("/message"):
         kwargs["json"] = {"content": "hi"}
+    if path == "/admin/instructions" and method == "put":
+        kwargs["json"] = {"additional_instructions": "x"}
+    if path == "/admin/faq" and method == "post":
+        kwargs["json"] = {"question": "q", "answer": "a"}
+    if path == "/admin/faq/1" and method == "put":
+        kwargs["json"] = {"question": "q", "answer": "a"}
     resp = getattr(client, method)(path, **kwargs)
     assert resp.status_code == 401, f"{method.upper()} {path} should be 401"
 

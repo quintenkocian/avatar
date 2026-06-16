@@ -25,10 +25,23 @@ import {
   adminOpenConversation,
   adminPostMessage,
   adminResolve,
+  adminArchiveConversation,
+  adminListArchive,
+  adminOpenArchive,
+  adminRestoreConversation,
+  adminArchiveInactive,
+  adminGetInstructions,
+  adminPutInstructions,
+  adminListFaq,
+  adminCreateFaq,
+  adminUpdateFaq,
+  adminDeleteFaq,
+  adminDownload,
   getConfig,
   ApiError,
   type Conversation,
   type ConversationSummary,
+  type FaqRow,
   type Message,
 } from "../api";
 import { attachThemeToggle, initTheme } from "../theme";
@@ -57,6 +70,7 @@ type FilterMode = "all" | "attention" | "unread";
 function toolIcon(name: string): string {
   if (name === "push_tool") return "i-mail";
   if (name === "faq_tool") return "i-check";
+  if (name === "fetch") return "i-globe";
   return "i-tool";
 }
 
@@ -144,7 +158,40 @@ const dom = {
   threadInner: el<HTMLElement>("threadInner"),
   adminComposerInput: el<HTMLTextAreaElement>("adminComposerInput"),
   adminSendBtn: el<HTMLButtonElement>("adminSendBtn"),
+  // Conversations tools + thread archive button
+  convoDownloadBtn: el<HTMLButtonElement>("convoDownloadBtn"),
+  archiveInactiveBtn: el<HTMLButtonElement>("archiveInactiveBtn"),
+  archiveBtn: el<HTMLButtonElement>("archiveBtn"),
+  // Tabs
+  adminTabs: el<HTMLElement>("adminTabs"),
+  // Archive panel
+  archiveCount: el<HTMLElement>("archiveCount"),
+  archiveSearchInput: el<HTMLInputElement>("archiveSearchInput"),
+  archiveList: el<HTMLElement>("archiveList"),
+  archiveListEmpty: el<HTMLElement>("archiveListEmpty"),
+  archiveDownloadBtn: el<HTMLButtonElement>("archiveDownloadBtn"),
+  archiveThreadEmpty: el<HTMLElement>("archiveThreadEmpty"),
+  archiveThreadView: el<HTMLElement>("archiveThreadView"),
+  archiveThreadInitials: el<HTMLElement>("archiveThreadInitials"),
+  archiveThreadName: el<HTMLElement>("archiveThreadName"),
+  archiveThreadSub: el<HTMLElement>("archiveThreadSub"),
+  archiveThread: el<HTMLElement>("archiveThread"),
+  archiveThreadInner: el<HTMLElement>("archiveThreadInner"),
+  archiveRestoreBtn: el<HTMLButtonElement>("archiveRestoreBtn"),
+  archiveBackBtn: el<HTMLButtonElement>("archiveBackBtn"),
+  // Instructions panel
+  instructionsTextarea: el<HTMLTextAreaElement>("instructionsTextarea"),
+  instructionsSaveBtn: el<HTMLButtonElement>("instructionsSaveBtn"),
+  instructionsStatus: el<HTMLElement>("instructionsStatus"),
+  // FAQ panel
+  faqList: el<HTMLElement>("faqList"),
+  faqEmpty: el<HTMLElement>("faqEmpty"),
+  faqCount: el<HTMLElement>("faqCount"),
+  faqAddBtn: el<HTMLButtonElement>("faqAddBtn"),
+  faqRowTemplate: el<HTMLTemplateElement>("faqRowTemplate"),
 };
+
+type TabName = "conversations" | "archive" | "instructions" | "faq";
 
 function init(): void {
   initTheme();
@@ -153,6 +200,11 @@ function init(): void {
   wireAuth();
   wireInbox();
   wireThread();
+  wireTabs();
+  wireConvoTools();
+  wireArchive();
+  wireInstructions();
+  wireFaq();
   wireGlobalKeys();
 
   // Owner name is decorative here ("You" already in markup); fetch it so any
@@ -682,18 +734,24 @@ function dayLabel(value: string): string {
   });
 }
 
-function buildMessage(msg: Message): HTMLElement {
-  if (msg.role === "visitor") return buildVisitorMessage(msg);
+function buildMessage(
+  msg: Message,
+  threadName: string | null = state.threadName
+): HTMLElement {
+  if (msg.role === "visitor") return buildVisitorMessage(msg, threadName);
   if (msg.role === "human") return buildHumanMessage(msg);
   return buildAvatarMessage(msg);
 }
 
-function buildVisitorMessage(msg: Message): HTMLElement {
+function buildVisitorMessage(
+  msg: Message,
+  threadName: string | null = state.threadName
+): HTMLElement {
   const wrap = document.createElement("div");
   wrap.className = "msg msg--visitor";
   wrap.dataset.id = String(msg.id);
 
-  const ini = initials(state.threadName);
+  const ini = initials(threadName);
   wrap.innerHTML = `
     <span class="avatar-initials">${escapeHtml(ini)}</span>
     <div class="msg-body">
@@ -899,6 +957,7 @@ function exitDetailViewMobile(): void {
 function wireGlobalKeys(): void {
   document.addEventListener("keydown", (event) => {
     if (!state.authed || dom.dashboard.hidden) return;
+    if (activeTab !== "conversations") return;
     if (event.key !== "ArrowUp" && event.key !== "ArrowDown") return;
 
     const target = event.target as HTMLElement | null;
@@ -940,7 +999,8 @@ async function poll(): Promise<void> {
   if (!state.authed || dom.dashboard.hidden) return;
   if (document.hidden) return; // skip while the tab is backgrounded
   await refreshInbox();
-  if (state.activeId) {
+  // Only refresh the open conversation thread while the Conversations tab is up.
+  if (state.activeId && activeTab === "conversations") {
     await pollOpenThread(state.activeId);
   }
 }
@@ -1016,6 +1076,456 @@ document.addEventListener("visibilitychange", () => {
     void poll();
   }
 });
+
+// ---------------------------------------------------------------------------
+// Main nav tabs (Conversations | Archive | Instructions | FAQ)
+// ---------------------------------------------------------------------------
+
+let activeTab: TabName = "conversations";
+let instructionsLoaded = false;
+let faqLoaded = false;
+
+const PANEL_IDS: Record<TabName, string> = {
+  conversations: "panel-conversations",
+  archive: "panel-archive",
+  instructions: "panel-instructions",
+  faq: "panel-faq",
+};
+
+function wireTabs(): void {
+  dom.adminTabs.addEventListener("click", (event) => {
+    const btn = (event.target as HTMLElement).closest<HTMLElement>(".admin-tab");
+    if (!btn || !btn.dataset.tab) return;
+    switchTab(btn.dataset.tab as TabName);
+  });
+}
+
+function switchTab(tab: TabName): void {
+  if (tab === activeTab) return;
+  activeTab = tab;
+  // Leaving any thread detail view: reset the mobile master/detail flip.
+  dom.dashboard.classList.remove("show-detail");
+
+  dom.adminTabs.querySelectorAll<HTMLElement>(".admin-tab").forEach((b) => {
+    const on = b.dataset.tab === tab;
+    b.classList.toggle("is-on", on);
+    b.setAttribute("aria-selected", on ? "true" : "false");
+  });
+  (Object.keys(PANEL_IDS) as TabName[]).forEach((name) => {
+    const panel = document.getElementById(PANEL_IDS[name]);
+    if (panel) panel.hidden = name !== tab;
+  });
+
+  // Lazy-load each section. Archive always refreshes (it changes as you archive);
+  // Instructions/FAQ load once so in-progress edits aren't clobbered.
+  if (tab === "archive") void refreshArchive();
+  else if (tab === "instructions" && !instructionsLoaded) void loadInstructions();
+  else if (tab === "faq" && !faqLoaded) void loadFaq();
+}
+
+// ---------------------------------------------------------------------------
+// Conversations tools — download, archive-idle, archive-thread
+// ---------------------------------------------------------------------------
+
+function wireConvoTools(): void {
+  dom.convoDownloadBtn.addEventListener("click", () =>
+    void download(dom.convoDownloadBtn, "/admin/export/conversations", "conversations.jsonl")
+  );
+  dom.archiveInactiveBtn.addEventListener("click", () => void archiveInactive());
+  dom.archiveBtn.addEventListener("click", () => void archiveActiveConversation());
+}
+
+async function archiveActiveConversation(): Promise<void> {
+  const id = state.activeId;
+  if (!id) return;
+  if (
+    !window.confirm(
+      "Archive this whole conversation? It moves to the Archive tab and leaves the inbox."
+    )
+  ) {
+    return;
+  }
+  dom.archiveBtn.disabled = true;
+  try {
+    await adminArchiveConversation(id);
+    state.summaries = state.summaries.filter((s) => s.conversation_id !== id);
+    closeOpenThread();
+    renderInbox();
+  } catch (err) {
+    if (err instanceof ApiError && err.status === 401) showLoginGate();
+  } finally {
+    dom.archiveBtn.disabled = false;
+  }
+}
+
+async function archiveInactive(): Promise<void> {
+  if (
+    !window.confirm(
+      "Archive every conversation with no activity in the last 72 hours?"
+    )
+  ) {
+    return;
+  }
+  dom.archiveInactiveBtn.disabled = true;
+  try {
+    const res = await adminArchiveInactive();
+    await refreshInbox();
+    if (state.activeId && res.archived.includes(state.activeId)) closeOpenThread();
+    flashButton(dom.archiveInactiveBtn, `Archived ${res.count}`);
+  } catch (err) {
+    if (err instanceof ApiError && err.status === 401) showLoginGate();
+  } finally {
+    dom.archiveInactiveBtn.disabled = false;
+  }
+}
+
+/** Close the open conversation thread and return to the empty/inbox state. */
+function closeOpenThread(): void {
+  resetThreadState();
+  dom.threadView.hidden = true;
+  dom.threadEmpty.hidden = false;
+  dom.dashboard.classList.remove("show-detail");
+}
+
+// ---------------------------------------------------------------------------
+// Archive tab
+// ---------------------------------------------------------------------------
+
+interface ArchiveState {
+  summaries: ConversationSummary[];
+  search: string;
+  activeId: string | null;
+  threadName: string | null;
+}
+const archiveState: ArchiveState = {
+  summaries: [],
+  search: "",
+  activeId: null,
+  threadName: null,
+};
+
+function wireArchive(): void {
+  dom.archiveSearchInput.addEventListener("input", () => {
+    archiveState.search = dom.archiveSearchInput.value.trim().toLowerCase();
+    renderArchiveInbox();
+  });
+  dom.archiveList.addEventListener("click", (event) => {
+    const item = (event.target as HTMLElement).closest<HTMLElement>(".convo-item");
+    if (item?.dataset.id) void openArchive(item.dataset.id);
+  });
+  dom.archiveDownloadBtn.addEventListener("click", () =>
+    void download(dom.archiveDownloadBtn, "/admin/export/archive", "archive.jsonl")
+  );
+  dom.archiveRestoreBtn.addEventListener("click", () => void restoreActiveArchive());
+  dom.archiveBackBtn.addEventListener("click", exitDetailViewMobile);
+}
+
+async function refreshArchive(): Promise<void> {
+  try {
+    const { conversations } = await adminListArchive();
+    archiveState.summaries = conversations;
+  } catch (err) {
+    if (err instanceof ApiError && err.status === 401) showLoginGate();
+    return;
+  }
+  renderArchiveInbox();
+}
+
+function visibleArchive(): ConversationSummary[] {
+  const q = archiveState.search;
+  if (!q) return archiveState.summaries;
+  return archiveState.summaries.filter((s) => {
+    const name = (s.conversation_name ?? "").toLowerCase();
+    const preview = (s.last_content ?? "").toLowerCase();
+    return (
+      name.includes(q) ||
+      preview.includes(q) ||
+      s.conversation_id.toLowerCase().includes(q)
+    );
+  });
+}
+
+function renderArchiveInbox(): void {
+  dom.archiveCount.textContent = String(archiveState.summaries.length);
+  const visible = visibleArchive();
+  dom.archiveList.querySelectorAll(".convo-item").forEach((n) => n.remove());
+  if (visible.length === 0) {
+    dom.archiveListEmpty.hidden = false;
+    dom.archiveListEmpty.textContent =
+      archiveState.summaries.length === 0
+        ? "No archived conversations."
+        : "No archived conversations match.";
+    return;
+  }
+  dom.archiveListEmpty.hidden = true;
+  const frag = document.createDocumentFragment();
+  for (const s of visible) frag.appendChild(buildArchiveItem(s));
+  dom.archiveList.insertBefore(frag, dom.archiveListEmpty);
+}
+
+function buildArchiveItem(s: ConversationSummary): HTMLElement {
+  const item = document.createElement("div");
+  item.className = "convo-item";
+  item.dataset.id = s.conversation_id;
+  item.setAttribute("role", "option");
+  item.classList.toggle("is-active", s.conversation_id === archiveState.activeId);
+  const name = displayName(s.conversation_name);
+  const ini = s.initials || initials(s.conversation_name);
+  const preview = previewText(s);
+  const time = formatInboxTime(s.last_at);
+  item.innerHTML = `
+    <span class="avatar-initials">${escapeHtml(ini)}</span>
+    <div class="convo-main">
+      <div class="convo-top"><span class="convo-name">${escapeHtml(name)}</span></div>
+      <div class="convo-preview">${escapeHtml(preview)}</div>
+    </div>
+    <div class="convo-side">
+      <span class="msg-time">${escapeHtml(time)}</span>
+    </div>`;
+  return item;
+}
+
+async function openArchive(conversationId: string): Promise<void> {
+  archiveState.activeId = conversationId;
+  dom.archiveList.querySelectorAll<HTMLElement>(".convo-item").forEach((row) => {
+    row.classList.toggle("is-active", row.dataset.id === conversationId);
+  });
+  enterDetailViewMobile();
+
+  let convo: Conversation;
+  try {
+    convo = await adminOpenArchive(conversationId);
+  } catch (err) {
+    if (err instanceof ApiError && err.status === 401) showLoginGate();
+    return;
+  }
+  archiveState.threadName = convo.conversation_name;
+  dom.archiveThreadEmpty.hidden = true;
+  dom.archiveThreadView.hidden = false;
+  dom.archiveThreadName.textContent = displayName(convo.conversation_name);
+  dom.archiveThreadInitials.textContent = initials(convo.conversation_name);
+  const started = convo.messages.length
+    ? formatDayTime(convo.messages[0].created_at)
+    : "—";
+  const count = convo.messages.length;
+  dom.archiveThreadSub.textContent = `${shortConvId(conversationId)} · started ${started} · ${count} ${
+    count === 1 ? "message" : "messages"
+  }`;
+
+  dom.archiveThreadInner.innerHTML = "";
+  const frag = document.createDocumentFragment();
+  for (const m of convo.messages) {
+    frag.appendChild(buildMessage(m, convo.conversation_name));
+  }
+  dom.archiveThreadInner.appendChild(frag);
+  window.requestAnimationFrame(() => scrollToBottom(dom.archiveThread));
+}
+
+async function restoreActiveArchive(): Promise<void> {
+  const id = archiveState.activeId;
+  if (!id) return;
+  dom.archiveRestoreBtn.disabled = true;
+  try {
+    await adminRestoreConversation(id);
+    archiveState.summaries = archiveState.summaries.filter(
+      (s) => s.conversation_id !== id
+    );
+    archiveState.activeId = null;
+    dom.archiveThreadView.hidden = true;
+    dom.archiveThreadEmpty.hidden = false;
+    dom.dashboard.classList.remove("show-detail");
+    renderArchiveInbox();
+    // The conversation is live again; reflect it in the Conversations inbox.
+    await refreshInbox();
+  } catch (err) {
+    if (err instanceof ApiError && err.status === 401) showLoginGate();
+  } finally {
+    dom.archiveRestoreBtn.disabled = false;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Instructions tab
+// ---------------------------------------------------------------------------
+
+function wireInstructions(): void {
+  dom.instructionsSaveBtn.addEventListener("click", () => void saveInstructions());
+}
+
+async function loadInstructions(): Promise<void> {
+  try {
+    const { additional_instructions } = await adminGetInstructions();
+    dom.instructionsTextarea.value = additional_instructions;
+    instructionsLoaded = true;
+  } catch (err) {
+    if (err instanceof ApiError && err.status === 401) showLoginGate();
+  }
+}
+
+async function saveInstructions(): Promise<void> {
+  dom.instructionsSaveBtn.disabled = true;
+  setEditorStatus(dom.instructionsStatus, "Saving…", "");
+  try {
+    const { additional_instructions } = await adminPutInstructions(
+      dom.instructionsTextarea.value
+    );
+    dom.instructionsTextarea.value = additional_instructions;
+    setEditorStatus(
+      dom.instructionsStatus,
+      "Saved. Takes effect on the next reply.",
+      "is-ok"
+    );
+  } catch (err) {
+    if (err instanceof ApiError && err.status === 401) showLoginGate();
+    setEditorStatus(dom.instructionsStatus, "Could not save. Try again.", "is-error");
+  } finally {
+    dom.instructionsSaveBtn.disabled = false;
+  }
+}
+
+function setEditorStatus(elm: HTMLElement, text: string, cls: string): void {
+  elm.textContent = text;
+  elm.className = "editor-status" + (cls ? " " + cls : "");
+}
+
+// ---------------------------------------------------------------------------
+// FAQ tab
+// ---------------------------------------------------------------------------
+
+function wireFaq(): void {
+  dom.faqAddBtn.addEventListener("click", () => addFaqRow());
+}
+
+async function loadFaq(): Promise<void> {
+  try {
+    const { faqs } = await adminListFaq();
+    renderFaqList(faqs);
+    faqLoaded = true;
+  } catch (err) {
+    if (err instanceof ApiError && err.status === 401) showLoginGate();
+  }
+}
+
+function renderFaqList(faqs: FaqRow[]): void {
+  dom.faqList.innerHTML = "";
+  for (const row of faqs) dom.faqList.appendChild(buildFaqRow(row));
+  updateFaqMeta();
+}
+
+function buildFaqRow(row: FaqRow | null): HTMLElement {
+  const node = dom.faqRowTemplate.content.firstElementChild!.cloneNode(
+    true
+  ) as HTMLElement;
+  const idEl = node.querySelector<HTMLElement>(".faq-id")!;
+  const concise = node.querySelector<HTMLInputElement>(".faq-concise")!;
+  const question = node.querySelector<HTMLInputElement>(".faq-question")!;
+  const answer = node.querySelector<HTMLTextAreaElement>(".faq-answer")!;
+  const saveBtn = node.querySelector<HTMLButtonElement>(".faq-save")!;
+  const delBtn = node.querySelector<HTMLButtonElement>(".faq-delete")!;
+  if (row) {
+    node.dataset.id = String(row.id);
+    idEl.textContent = `#${row.id}`;
+    concise.value = row.concise;
+    question.value = row.question;
+    answer.value = row.answer;
+  } else {
+    node.classList.add("is-new");
+    idEl.textContent = "#new";
+  }
+  saveBtn.addEventListener("click", () => void saveFaqRow(node));
+  delBtn.addEventListener("click", () => void deleteFaqRow(node));
+  return node;
+}
+
+function addFaqRow(): void {
+  dom.faqEmpty.hidden = true;
+  const node = buildFaqRow(null);
+  dom.faqList.prepend(node);
+  node.querySelector<HTMLInputElement>(".faq-question")?.focus();
+}
+
+async function saveFaqRow(node: HTMLElement): Promise<void> {
+  const concise = node.querySelector<HTMLInputElement>(".faq-concise")!.value.trim();
+  const question = node.querySelector<HTMLInputElement>(".faq-question")!.value.trim();
+  const answer = node.querySelector<HTMLTextAreaElement>(".faq-answer")!.value.trim();
+  if (!question || !answer) {
+    window.alert("A question and an answer are both required.");
+    return;
+  }
+  const saveBtn = node.querySelector<HTMLButtonElement>(".faq-save")!;
+  saveBtn.disabled = true;
+  try {
+    const idStr = node.dataset.id;
+    if (idStr) {
+      await adminUpdateFaq(Number(idStr), { concise, question, answer });
+    } else {
+      const created = await adminCreateFaq({ concise, question, answer });
+      node.dataset.id = String(created.id);
+      node.classList.remove("is-new");
+      node.querySelector<HTMLElement>(".faq-id")!.textContent = `#${created.id}`;
+    }
+    updateFaqMeta();
+    flashButton(saveBtn, "Saved");
+  } catch (err) {
+    if (err instanceof ApiError && err.status === 401) showLoginGate();
+  } finally {
+    saveBtn.disabled = false;
+  }
+}
+
+async function deleteFaqRow(node: HTMLElement): Promise<void> {
+  const idStr = node.dataset.id;
+  if (!idStr) {
+    // An unsaved new row — just drop it.
+    node.remove();
+    updateFaqMeta();
+    return;
+  }
+  if (!window.confirm("Delete this FAQ entry?")) return;
+  try {
+    await adminDeleteFaq(Number(idStr));
+    node.remove();
+    updateFaqMeta();
+  } catch (err) {
+    if (err instanceof ApiError && err.status === 401) showLoginGate();
+  }
+}
+
+/** Refresh the FAQ count badge (saved rows only) and the empty state. */
+function updateFaqMeta(): void {
+  const total = dom.faqList.querySelectorAll(".faq-row").length;
+  const saved = dom.faqList.querySelectorAll(".faq-row[data-id]").length;
+  dom.faqCount.textContent = String(saved);
+  dom.faqEmpty.hidden = total > 0;
+}
+
+// ---------------------------------------------------------------------------
+// Shared small helpers
+// ---------------------------------------------------------------------------
+
+async function download(
+  btn: HTMLButtonElement,
+  path: string,
+  filename: string
+): Promise<void> {
+  btn.disabled = true;
+  try {
+    await adminDownload(path, filename);
+  } catch (err) {
+    if (err instanceof ApiError && err.status === 401) showLoginGate();
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+/** Briefly swap a button's label to confirm an action, then restore it. */
+function flashButton(btn: HTMLButtonElement, text: string): void {
+  const original = btn.innerHTML;
+  btn.textContent = text;
+  window.setTimeout(() => {
+    btn.innerHTML = original;
+  }, 1600);
+}
 
 // ---------------------------------------------------------------------------
 // Go
