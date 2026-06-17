@@ -198,5 +198,82 @@ Putting the app on your own website is **optional** - the `https://<your-app>.fl
 
 ## Built-in protections
 
-The backend guards your API key automatically, with no configuration: visitor messages longer than 20,000 characters are truncated (with a short note appended) before being stored or sent to the model, and more than 20 messages per minute from a single conversation are rejected (HTTP 429, with a friendly slow-down message in the chat) before any model call is made.
+The backend guards your API key automatically, with no configuration: visitor messages longer than 20,000 characters are truncated (with a short note appended) before being stored or sent to the model, and more than 20 messages per minute from a single conversation are rejected (HTTP 429, with a friendly slow-down message in the chat) before any model call is made. The admin login is throttled per IP (5 failed attempts/minute) and the app refuses to start without `ADMIN_PASSWORD` set, so a fork can never run with an empty password.
+
+## Setup for MORE requirements
+
+The "MORE" evolution (admin Archive, Instructions, and a Supabase-backed FAQ editor, plus a job-posting web-fetch tool) adds three new tables alongside `messages`. They follow the exact same pattern as `messages`: created in the Supabase SQL editor, granted to `service_role`, and run **without RLS** (only the backend's secret key touches them).
+
+### 1. Create the new tables
+
+In the Supabase **SQL Editor**, open a new snippet, paste the SQL below, and click **Run** (choose **Run without RLS**, just like `messages`). This only *creates* new tables — it never touches your existing `messages` data.
+
+```sql
+-- archive: same shape as messages. Whole conversations are moved here.
+create table public.archive (
+  id              bigint generated always as identity primary key,
+  conversation_id uuid not null,
+  conversation_name text,
+  role            text not null check (role in ('visitor', 'avatar', 'human')),
+  content         text not null,
+  tool_calls      jsonb,
+  needs_attention boolean not null default false,
+  read            boolean not null default false,
+  created_at      timestamptz not null default now()
+);
+create index archive_conversation_id_idx on public.archive (conversation_id);
+create index archive_created_at_idx on public.archive (created_at desc);
+grant select, insert, update, delete on public.archive to service_role;
+
+-- settings: a single pinned row (id=1) holding the admin's extra instructions.
+create table public.settings (
+  id                      integer primary key default 1 check (id = 1),
+  additional_instructions text not null default '',
+  updated_at              timestamptz not null default now()
+);
+insert into public.settings (id, additional_instructions) values (1, '')
+  on conflict (id) do nothing;
+grant select, insert, update, delete on public.settings to service_role;
+
+-- faq: editable FAQ. id is the FAQ number (preserved so Qn / ?q=N keep working).
+create table public.faq (
+  id       bigint primary key,
+  concise  text not null default '',
+  question text not null default '',
+  answer   text not null default ''
+);
+grant select, insert, update, delete on public.faq to service_role;
+```
+
+What the tables are for:
+- **`archive`** — a whole conversation is copied here and removed from `messages` when you click **Archive** (or **Archive idle 72h**). **Restore** moves it back. Same columns as `messages`.
+- **`settings`** — one row (`id = 1`) whose `additional_instructions` markdown is appended to the Avatar's system prompt. Edit it under the admin **Instructions** tab; it is read fresh on every reply.
+- **`faq`** — the editable FAQ (admin **FAQ** tab). `id` is the FAQ number, `concise` is the short routing phrase, and `question`/`answer` are returned verbatim. The Supabase table is the source of truth; `knowledge/faq.jsonl` is kept as a seed/backup.
+
+### 2. Seed the FAQ from the seed file
+
+Load the rows in `knowledge/faq.jsonl` into the new `faq` table (idempotent — safe to re-run):
+
+```
+cd backend && uv run python ../scripts/seed_faq.py
+```
+
+It preserves the FAQ numbers, so the `Qn` shortcut and `?q=N` deep link keep resolving. The seeding script also wraps any underscore-bearing identifiers (e.g. `OPENAI_API_KEY`) in inline code and strips stray "(a screenshot shows…)" notes, keeping the FAQ markdown clean for any owner.
+
+### 3. Validate
+
+The connectivity test now covers all four tables, so it doubles as the setup gate:
+
+```
+cd backend && uv run pytest tests/test_supabase_connection.py -v
+```
+
+All tests must pass. If `archive`, `settings`, or `faq` is missing you'll get a clear failure — re-run the SQL above.
+
+### Other MORE features (no setup needed)
+
+- **Web-fetch tool** — when a visitor pastes a link to a **job description**, the Avatar fetches it (via the `mcp-server-fetch` MCP server, pre-installed in the image) and assesses fit. It is scoped to job postings only, not general browsing. Its use shows in the chat alongside the FAQ and push tools.
+- **`?m=` deep link** — `…/?m=whats+the+price+of+sliced+bread` opens the chat and submits that text automatically (free-text counterpart to `?q=N`; if both are present, `?q` wins).
+- **OG social image** — `og-avatar.png` (1200×630) in the project root is a ready-to-upload Open Graph card for sharing the link on LinkedIn etc. Regenerate it for your own owner with `uv run --with pillow python scripts/generate_og.py`.
+- **Visitor polling** backs off through tiers (10s → 30s after 2 min → 2 min after 10 min → 5 min after 1 hr of quiet) to reduce idle server load.
 

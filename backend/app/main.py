@@ -16,6 +16,7 @@ from __future__ import annotations
 import json
 import logging
 import re
+from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any, AsyncIterator
 
@@ -31,17 +32,27 @@ from fastapi.responses import (
 from fastapi.staticfiles import StaticFiles
 from starlette.concurrency import run_in_threadpool
 
-from . import agent, db, knowledge, rate_limit, security
-from .config import settings
+from . import agent, db, knowledge, notifications, rate_limit, security
+from .config import require_admin_password, settings
 from .models import (
     AdminMessageRequest,
     ChatRequest,
+    FaqRequest,
+    InstructionsRequest,
     LoginRequest,
 )
 
 logger = logging.getLogger("avatar")
 
-app = FastAPI(title="Avatar", version="0.1.0")
+
+@asynccontextmanager
+async def lifespan(_: FastAPI) -> AsyncIterator[None]:
+    """Fail closed at startup if no admin password is configured."""
+    require_admin_password()
+    yield
+
+
+app = FastAPI(title="Avatar", version="0.1.0", lifespan=lifespan)
 
 # A bare "Qn" message (case-insensitive), 1–2 digits, is the instant shortcut.
 _QN_RE = re.compile(r"^q(\d{1,2})$", re.IGNORECASE)
@@ -82,6 +93,51 @@ def _name_to_store(provided: str | None, rows: list[dict]) -> str | None:
 def _sse(payload: dict[str, Any]) -> str:
     """Encode a payload as a single SSE ``data:`` frame."""
     return f"data: {json.dumps(payload, ensure_ascii=False)}\n\n"
+
+
+async def _live_faqs() -> list[dict]:
+    """The current FAQ list from Supabase, falling back to the on-disk seed.
+
+    The DB is the source of truth (per the admin FAQ editor). If the table is
+    empty or unreachable, the seed keeps the twin answering.
+    """
+    try:
+        faqs = await run_in_threadpool(db.list_faqs)
+    except Exception:  # pragma: no cover - defensive; never break a chat turn
+        logger.exception("Failed to load FAQs from DB; using seed")
+        faqs = []
+    return faqs or knowledge.SEED_FAQS
+
+
+async def _faq_row(n: int) -> dict | None:
+    """Look up a single FAQ by number (DB first, then seed)."""
+    try:
+        row = await run_in_threadpool(db.get_faq, n)
+    except Exception:  # pragma: no cover - defensive
+        row = None
+    if row is None:
+        row = knowledge.seed_faq(n)
+    return row
+
+
+def _client_ip(request: Request) -> str:
+    """Best-effort client IP (honours a single proxy hop via X-Forwarded-For)."""
+    forwarded = request.headers.get("x-forwarded-for")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    return request.client.host if request.client else "unknown"
+
+
+def _jsonl_response(rows: list[dict], filename: str) -> Response:
+    """Return rows as a downloadable JSONL file (one JSON object per line)."""
+    body = "\n".join(json.dumps(r, ensure_ascii=False, default=str) for r in rows)
+    if body:
+        body += "\n"
+    return Response(
+        content=body,
+        media_type="application/x-ndjson",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
 
 
 # --- Public API --------------------------------------------------------------
@@ -131,9 +187,10 @@ async def api_instant(body: ChatRequest) -> JSONResponse:
         return JSONResponse({"found": False})
 
     n = int(match.group(1))
-    answer = knowledge.instant_answer_markdown(n)
-    if answer is None:
+    row = await _faq_row(n)
+    if row is None:
         return JSONResponse({"found": False})
+    answer = knowledge.format_instant(row)
 
     # Clamp defensively (a bare Qn is tiny, but keep the single code path honest).
     visitor_content = _clamp_message(body.message)
@@ -197,6 +254,14 @@ async def api_chat(body: ChatRequest) -> Response:
     )
     task = knowledge.build_user_task(transcript, settings.OWNER_NAME)
 
+    # Compose the system prompt with the live FAQ list and the admin's
+    # additional instructions, both read fresh so edits take effect immediately.
+    faqs = await _live_faqs()
+    additional = await run_in_threadpool(db.get_additional_instructions)
+    system_prompt = knowledge.build_system_prompt(
+        settings.OWNER_NAME, faqs, additional_instructions=additional
+    )
+
     async def event_stream() -> AsyncIterator[str]:
         yield _sse({"type": "start"})
         full_text_parts: list[str] = []
@@ -204,7 +269,9 @@ async def api_chat(body: ChatRequest) -> Response:
         errored = False
 
         try:
-            async for piece in agent.stream_reply(task, settings.OWNER_NAME):
+            async for piece in agent.stream_reply(
+                task, settings.OWNER_NAME, system_prompt=system_prompt
+            ):
                 ptype = piece.get("type")
                 if ptype == "token":
                     full_text_parts.append(piece.get("text", ""))
@@ -270,9 +337,19 @@ async def api_chat(body: ChatRequest) -> Response:
 
 
 @app.post("/admin/login")
-async def admin_login(body: LoginRequest) -> JSONResponse:
-    """Authenticate the owner; set the session cookie on success."""
+async def admin_login(body: LoginRequest, request: Request) -> JSONResponse:
+    """Authenticate the owner; set the session cookie on success.
+
+    Failed attempts are throttled per client IP (and alert the owner). A
+    successful login is never throttled, so the owner is never locked out.
+    """
+    ip = _client_ip(request)
+    if not await run_in_threadpool(rate_limit.login_check, ip):
+        return JSONResponse(
+            {"ok": False, "error": "too_many_attempts"}, status_code=429
+        )
     if not security.check_password(body.password):
+        notifications.push_login_failure(ip)
         return JSONResponse({"ok": False}, status_code=401)
     response = JSONResponse({"ok": True})
     security.set_session_cookie(response)
@@ -341,6 +418,151 @@ async def admin_resolve(
 ) -> JSONResponse:
     """Clear the needs-attention flag for the conversation."""
     await run_in_threadpool(db.mark_resolved, conversation_id)
+    return JSONResponse({"ok": True})
+
+
+# --- Admin: archive ----------------------------------------------------------
+
+
+@app.post("/admin/conversations/{conversation_id}/archive")
+async def admin_archive(
+    conversation_id: str, _: None = Depends(security.require_admin)
+) -> JSONResponse:
+    """Archive a whole conversation: copy it to ``archive`` then delete from live."""
+    moved = await run_in_threadpool(db.archive_conversation, conversation_id)
+    return JSONResponse({"ok": True, "moved": moved})
+
+
+@app.get("/admin/archive")
+async def admin_list_archive(
+    _: None = Depends(security.require_admin),
+) -> JSONResponse:
+    """Archive inbox summaries, most-recent first, plus the total count."""
+    conversations = await run_in_threadpool(db.list_archived_conversations)
+    return JSONResponse(
+        {"conversations": conversations, "total": len(conversations)}
+    )
+
+
+@app.get("/admin/archive/{conversation_id}")
+async def admin_open_archive(
+    conversation_id: str, _: None = Depends(security.require_admin)
+) -> JSONResponse:
+    """Open an archived thread (read-only; no read/attention side effects)."""
+    rows = await run_in_threadpool(db.get_archived_conversation, conversation_id)
+    return JSONResponse(
+        {
+            "conversation_id": conversation_id,
+            "conversation_name": _existing_name(rows),
+            "messages": rows,
+        }
+    )
+
+
+@app.post("/admin/archive/{conversation_id}/restore")
+async def admin_restore(
+    conversation_id: str, _: None = Depends(security.require_admin)
+) -> JSONResponse:
+    """Restore a whole archived conversation back into the live inbox."""
+    moved = await run_in_threadpool(db.restore_conversation, conversation_id)
+    return JSONResponse({"ok": True, "moved": moved})
+
+
+@app.post("/admin/archive-inactive")
+async def admin_archive_inactive(
+    _: None = Depends(security.require_admin),
+) -> JSONResponse:
+    """Archive every conversation with no activity in the last 72 hours."""
+    archived = await run_in_threadpool(db.archive_inactive, 72)
+    return JSONResponse({"ok": True, "archived": archived, "count": len(archived)})
+
+
+# --- Admin: export / download ------------------------------------------------
+
+
+@app.get("/admin/export/conversations")
+async def admin_export_conversations(
+    _: None = Depends(security.require_admin),
+) -> Response:
+    """Download all live conversation rows as JSONL (one object per message)."""
+    rows = await run_in_threadpool(db.export_rows, table=db.TABLE)
+    return _jsonl_response(rows, "conversations.jsonl")
+
+
+@app.get("/admin/export/archive")
+async def admin_export_archive(
+    _: None = Depends(security.require_admin),
+) -> Response:
+    """Download all archived rows as JSONL (one object per message)."""
+    rows = await run_in_threadpool(db.export_rows, table=db.ARCHIVE_TABLE)
+    return _jsonl_response(rows, "archive.jsonl")
+
+
+# --- Admin: additional instructions ------------------------------------------
+
+
+@app.get("/admin/instructions")
+async def admin_get_instructions(
+    _: None = Depends(security.require_admin),
+) -> JSONResponse:
+    """Return the admin's additional-instructions markdown."""
+    text = await run_in_threadpool(db.get_additional_instructions)
+    return JSONResponse({"additional_instructions": text})
+
+
+@app.put("/admin/instructions")
+async def admin_put_instructions(
+    body: InstructionsRequest, _: None = Depends(security.require_admin)
+) -> JSONResponse:
+    """Save the admin's additional-instructions markdown."""
+    text = await run_in_threadpool(
+        db.set_additional_instructions, body.additional_instructions
+    )
+    return JSONResponse({"additional_instructions": text})
+
+
+# --- Admin: FAQ editor -------------------------------------------------------
+
+
+@app.get("/admin/faq")
+async def admin_list_faq(
+    _: None = Depends(security.require_admin),
+) -> JSONResponse:
+    """List all FAQ rows ordered by number."""
+    faqs = await run_in_threadpool(db.list_faqs)
+    return JSONResponse({"faqs": faqs, "total": len(faqs)})
+
+
+@app.post("/admin/faq")
+async def admin_create_faq(
+    body: FaqRequest, _: None = Depends(security.require_admin)
+) -> JSONResponse:
+    """Create a new FAQ row (id = max(id)+1)."""
+    row = await run_in_threadpool(
+        db.create_faq, body.concise, body.question, body.answer
+    )
+    return JSONResponse({"faq": row})
+
+
+@app.put("/admin/faq/{faq_id}")
+async def admin_update_faq(
+    faq_id: int, body: FaqRequest, _: None = Depends(security.require_admin)
+) -> JSONResponse:
+    """Update an existing FAQ row."""
+    row = await run_in_threadpool(
+        db.update_faq, faq_id, body.concise, body.question, body.answer
+    )
+    if row is None:
+        raise HTTPException(status_code=404, detail="faq not found")
+    return JSONResponse({"faq": row})
+
+
+@app.delete("/admin/faq/{faq_id}")
+async def admin_delete_faq(
+    faq_id: int, _: None = Depends(security.require_admin)
+) -> JSONResponse:
+    """Delete a FAQ row by id."""
+    await run_in_threadpool(db.delete_faq, faq_id)
     return JSONResponse({"ok": True})
 
 

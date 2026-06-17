@@ -8,8 +8,10 @@ environment.
 
 from __future__ import annotations
 
+import pytest
+
 from app import config
-from app.config import PROJECT_ROOT, Settings, settings
+from app.config import PROJECT_ROOT, Settings, require_admin_password, settings
 
 
 def test_env_loaded():
@@ -66,6 +68,23 @@ def test_abuse_guard_constants():
     assert Settings.MAX_MESSAGE_CHARS == 20000
     assert Settings.RATE_LIMIT == "20/minute"
     assert "truncated" in Settings.TRUNCATION_NOTE
+
+
+def test_more_constants():
+    """MORE tunables have sensible defaults."""
+    assert Settings.MODEL_MAX_TOKENS == 2000
+    assert Settings.TRANSCRIPT_CHAR_BUDGET > 0
+    assert Settings.LOGIN_RATE_LIMIT == "5/minute"
+
+
+def test_require_admin_password_fails_closed(monkeypatch):
+    """The app refuses to start without an admin password (fail closed)."""
+    monkeypatch.setattr(settings, "ADMIN_PASSWORD", "")
+    with pytest.raises(RuntimeError):
+        require_admin_password()
+    # With a password set, it does not raise.
+    monkeypatch.setattr(settings, "ADMIN_PASSWORD", "set")
+    require_admin_password()
 
 
 def test_cookie_names():

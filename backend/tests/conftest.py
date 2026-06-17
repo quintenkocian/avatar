@@ -60,6 +60,14 @@ class FakeDB:
         self.inbox: list[dict] = []
         self.opened: list[str] = []
         self.resolved: list[str] = []
+        # MORE: FAQ / settings / archive state.
+        self.faqs: list[dict] = []
+        self.instructions: str = ""
+        self.archived_inbox: list[dict] = []
+        self.archived_conversation: list[dict] = []
+        self.archived: list[str] = []
+        self.restored: list[str] = []
+        self.archive_inactive_result: list[str] = []
 
     # -- writes ---------------------------------------------------------------
     def insert_message(
@@ -126,6 +134,81 @@ class FakeDB:
         self.calls.append(("mark_resolved", (conversation_id,), {}))
         self.resolved.append(conversation_id)
 
+    # -- FAQ ------------------------------------------------------------------
+    def list_faqs(self) -> list[dict]:
+        self.calls.append(("list_faqs", (), {}))
+        return list(self.faqs)
+
+    def get_faq(self, faq_id: int) -> dict | None:
+        self.calls.append(("get_faq", (faq_id,), {}))
+        for row in self.faqs:
+            if row.get("id") == faq_id:
+                return row
+        return None
+
+    def create_faq(self, concise: str, question: str, answer: str) -> dict:
+        self.calls.append(("create_faq", (concise, question, answer), {}))
+        next_id = (max((r["id"] for r in self.faqs), default=0) + 1)
+        row = {
+            "id": next_id,
+            "concise": concise,
+            "question": question,
+            "answer": answer,
+        }
+        self.faqs.append(row)
+        return row
+
+    def update_faq(
+        self, faq_id: int, concise: str, question: str, answer: str
+    ) -> dict | None:
+        self.calls.append(("update_faq", (faq_id, concise, question, answer), {}))
+        for row in self.faqs:
+            if row.get("id") == faq_id:
+                row.update(concise=concise, question=question, answer=answer)
+                return row
+        return None
+
+    def delete_faq(self, faq_id: int) -> None:
+        self.calls.append(("delete_faq", (faq_id,), {}))
+        self.faqs = [r for r in self.faqs if r.get("id") != faq_id]
+
+    # -- settings -------------------------------------------------------------
+    def get_additional_instructions(self) -> str:
+        self.calls.append(("get_additional_instructions", (), {}))
+        return self.instructions
+
+    def set_additional_instructions(self, text: str) -> str:
+        self.calls.append(("set_additional_instructions", (text,), {}))
+        self.instructions = text
+        return text
+
+    # -- archive --------------------------------------------------------------
+    def archive_conversation(self, conversation_id: str) -> int:
+        self.calls.append(("archive_conversation", (conversation_id,), {}))
+        self.archived.append(conversation_id)
+        return 1
+
+    def restore_conversation(self, conversation_id: str) -> int:
+        self.calls.append(("restore_conversation", (conversation_id,), {}))
+        self.restored.append(conversation_id)
+        return 1
+
+    def list_archived_conversations(self) -> list[dict]:
+        self.calls.append(("list_archived_conversations", (), {}))
+        return self.archived_inbox
+
+    def get_archived_conversation(self, conversation_id: str) -> list[dict]:
+        self.calls.append(("get_archived_conversation", (conversation_id,), {}))
+        return self.archived_conversation
+
+    def archive_inactive(self, hours: int = 72) -> list[str]:
+        self.calls.append(("archive_inactive", (hours,), {}))
+        return self.archive_inactive_result
+
+    def export_rows(self, *, table: str = "messages") -> list[dict]:
+        self.calls.append(("export_rows", (), {"table": table}))
+        return self.rows if table == "messages" else self.archived_conversation
+
     # -- helpers --------------------------------------------------------------
     def call_names(self) -> list[str]:
         return [c[0] for c in self.calls]
@@ -143,6 +226,28 @@ def fake_db(monkeypatch) -> FakeDB:
     monkeypatch.setattr(db, "list_conversations", fake.list_conversations)
     monkeypatch.setattr(db, "open_conversation", fake.open_conversation)
     monkeypatch.setattr(db, "mark_resolved", fake.mark_resolved)
+    # MORE: FAQ / settings / archive.
+    monkeypatch.setattr(db, "list_faqs", fake.list_faqs)
+    monkeypatch.setattr(db, "get_faq", fake.get_faq)
+    monkeypatch.setattr(db, "create_faq", fake.create_faq)
+    monkeypatch.setattr(db, "update_faq", fake.update_faq)
+    monkeypatch.setattr(db, "delete_faq", fake.delete_faq)
+    monkeypatch.setattr(
+        db, "get_additional_instructions", fake.get_additional_instructions
+    )
+    monkeypatch.setattr(
+        db, "set_additional_instructions", fake.set_additional_instructions
+    )
+    monkeypatch.setattr(db, "archive_conversation", fake.archive_conversation)
+    monkeypatch.setattr(db, "restore_conversation", fake.restore_conversation)
+    monkeypatch.setattr(
+        db, "list_archived_conversations", fake.list_archived_conversations
+    )
+    monkeypatch.setattr(
+        db, "get_archived_conversation", fake.get_archived_conversation
+    )
+    monkeypatch.setattr(db, "archive_inactive", fake.archive_inactive)
+    monkeypatch.setattr(db, "export_rows", fake.export_rows)
     return fake
 
 
@@ -155,7 +260,9 @@ def make_fake_stream(
     optional error piece. Mirrors the shapes the real agent yields.
     """
 
-    async def _stream(task: str, owner_name: str) -> AsyncIterator[dict[str, Any]]:
+    async def _stream(
+        task: str, owner_name: str, system_prompt: str | None = None
+    ) -> AsyncIterator[dict[str, Any]]:
         for tool in tools or []:
             yield {
                 "type": "tool",

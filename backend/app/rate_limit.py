@@ -20,9 +20,11 @@ from .config import settings
 _storage = MemoryStorage()
 _limiter = MovingWindowRateLimiter(_storage)
 _rate = parse(settings.RATE_LIMIT)
+_login_rate = parse(settings.LOGIN_RATE_LIMIT)
 
-# Namespace so keys never collide with anything else stored in the limiter.
+# Namespaces so keys never collide across the different limited surfaces.
 _NAMESPACE = "chat"
+_LOGIN_NAMESPACE = "login"
 
 
 def check(conversation_id: str) -> bool:
@@ -34,9 +36,19 @@ def check(conversation_id: str) -> bool:
     return _limiter.hit(_rate, _NAMESPACE, conversation_id)
 
 
+def login_check(client_ip: str) -> bool:
+    """Consume one failed-login unit for ``client_ip``. Return True if allowed.
+
+    Per-IP keying means an attacker only ever locks out their own IP. Successful
+    logins are never counted (the caller only records failures), so a legitimate
+    owner is never throttled.
+    """
+    return _limiter.hit(_login_rate, _LOGIN_NAMESPACE, client_ip or "unknown")
+
+
 def reset() -> None:
     """Clear all rate-limit state (used by tests)."""
     _storage.reset()
 
 
-__all__ = ["check", "reset"]
+__all__ = ["check", "login_check", "reset"]

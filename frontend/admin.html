@@ -100,95 +100,245 @@
     </div>
   </header>
 
-  <div class="workspace" id="workspace">
-    <!-- Sidebar / inbox -->
-    <aside class="sidebar" id="sidebar">
-      <div class="sidebar-head">
-        <div class="sidebar-title">
-          <h2><svg class="icon"><use href="/icons.svg#i-inbox" /></svg> Conversations</h2>
-          <span class="count-badge" id="convoCount">0</span>
-        </div>
-        <div class="search">
-          <svg class="icon icon--sm"><use href="/icons.svg#i-search" /></svg>
-          <input type="text" id="searchInput" placeholder="Search visitors &amp; messages…" autocomplete="off" />
-        </div>
-        <div class="filter-row" id="filterRow">
-          <span class="filter-chip is-on" data-filter="all">All</span>
-          <span class="filter-chip" data-filter="attention"><span class="dot-y"></span>Needs you</span>
-          <span class="filter-chip" data-filter="unread">Unread</span>
-        </div>
-      </div>
-      <div class="convo-list scroll" id="convoList" tabindex="0" role="listbox" aria-label="Conversations">
-        <!-- .convo-item rows injected by the admin screen logic. -->
-        <div class="list-empty" id="listEmpty" hidden>No conversations yet.</div>
-      </div>
-    </aside>
+  <!-- Main navigation: Conversations | Archive | Instructions | FAQ -->
+  <nav class="admin-tabs" id="adminTabs" role="tablist" aria-label="Sections">
+    <button class="admin-tab is-on" data-tab="conversations" role="tab" type="button">
+      <svg class="icon icon--sm"><use href="/icons.svg#i-inbox" /></svg><span>Conversations</span>
+    </button>
+    <button class="admin-tab" data-tab="archive" role="tab" type="button">
+      <svg class="icon icon--sm"><use href="/icons.svg#i-archive" /></svg><span>Archive</span>
+    </button>
+    <button class="admin-tab" data-tab="instructions" role="tab" type="button">
+      <svg class="icon icon--sm"><use href="/icons.svg#i-sliders" /></svg><span>Instructions</span>
+    </button>
+    <button class="admin-tab" data-tab="faq" role="tab" type="button">
+      <svg class="icon icon--sm"><use href="/icons.svg#i-tool" /></svg><span>FAQ</span>
+    </button>
+  </nav>
 
-    <!-- Main thread -->
-    <section class="main" id="main">
-      <!-- Empty state when no conversation is selected. -->
-      <div class="thread-empty" id="threadEmpty">
-        <svg class="icon icon--xl"><use href="/icons.svg#i-inbox" /></svg>
-        <p>Select a conversation to read the full thread.</p>
-      </div>
+  <div class="tab-body" id="tabBody">
 
-      <!-- Active thread view (hidden until a conversation is opened). -->
-      <div class="thread-view" id="threadView" hidden>
-        <div class="thread-head">
-          <div class="thread-id">
-            <button class="icon-btn back-btn back-btn--thread" id="threadBackBtn" type="button" title="Back to inbox" aria-label="Back to inbox">
-              <svg class="icon icon--sm"><use href="/icons.svg#i-arrow-left" /></svg>
-            </button>
-            <span class="avatar-initials" id="threadInitials">?</span>
-            <div class="meta">
-              <span class="name" id="threadName">—</span>
-              <span class="sub" id="threadSub">—</span>
+    <!-- ============================ CONVERSATIONS ======================= -->
+    <div class="tab-panel" id="panel-conversations">
+      <div class="workspace" id="workspace">
+        <!-- Sidebar / inbox -->
+        <aside class="sidebar" id="sidebar">
+          <div class="sidebar-head">
+            <div class="sidebar-title">
+              <h2><svg class="icon"><use href="/icons.svg#i-inbox" /></svg> Conversations</h2>
+              <span class="count-badge" id="convoCount">0</span>
             </div>
-          </div>
-          <div class="thread-actions">
-            <span class="attn-flag" id="attnFlag" hidden>
-              <svg class="icon"><use href="/icons.svg#i-spark" /></svg> Avatar asked for you
-            </span>
-            <button class="btn btn--secondary btn--sm" id="resolveBtn" type="button">
-              <svg class="icon icon--sm"><use href="/icons.svg#i-check" /></svg> Mark resolved
-            </button>
-          </div>
-        </div>
-
-        <div class="thread scroll" id="thread">
-          <div class="thread-inner" id="threadInner">
-            <!-- .msg rows injected by the admin screen logic. -->
-          </div>
-        </div>
-
-        <!-- Admin composer -->
-        <div class="admin-composer-dock">
-          <div class="admin-composer-wrap">
-            <div class="posting-as">
-              <span class="avatar avatar-human" style="background-image:url('/avatar-human.png')"></span>
-              Posting as <strong>you</strong> — the visitor sees this from your photo,
-              labelled <strong>live</strong>. The Avatar won't reply to it.
+            <div class="search">
+              <svg class="icon icon--sm"><use href="/icons.svg#i-search" /></svg>
+              <input type="text" id="searchInput" placeholder="Search visitors &amp; messages…" autocomplete="off" />
             </div>
-            <div class="composer" id="adminComposer">
-              <textarea id="adminComposerInput" rows="1" placeholder="Write a message to the visitor…"></textarea>
-              <button class="btn-send" id="adminSendBtn" type="button" title="Send (Enter)" aria-label="Send">
-                <svg class="icon"><use href="/icons.svg#i-send" /></svg>
+            <div class="filter-row" id="filterRow">
+              <span class="filter-chip is-on" data-filter="all">All</span>
+              <span class="filter-chip" data-filter="attention"><span class="dot-y"></span>Needs you</span>
+              <span class="filter-chip" data-filter="unread">Unread</span>
+            </div>
+            <div class="sidebar-tools">
+              <button class="btn btn--ghost btn--sm" id="convoDownloadBtn" type="button" title="Download all conversations as JSONL">
+                <svg class="icon icon--sm"><use href="/icons.svg#i-download" /></svg> Download
+              </button>
+              <button class="btn btn--ghost btn--sm" id="archiveInactiveBtn" type="button" title="Archive every conversation idle for 72h+">
+                <svg class="icon icon--sm"><use href="/icons.svg#i-archive" /></svg> Archive idle 72h
               </button>
             </div>
-            <div class="kbd-hints">
-              <span class="h">
-                <span class="kbd"><svg class="icon" style="width:12px;height:12px"><use href="/icons.svg#i-chev-up" /></svg></span><span class="kbd"><svg class="icon" style="width:12px;height:12px"><use href="/icons.svg#i-chev-down" /></svg></span>
-                move between conversations
-              </span>
-              <span class="h"><span class="kbd">Enter</span> send</span>
-              <span class="h"><span class="kbd">Shift</span>+<span class="kbd">Enter</span> new line</span>
+          </div>
+          <div class="convo-list scroll" id="convoList" tabindex="0" role="listbox" aria-label="Conversations">
+            <div class="list-empty" id="listEmpty" hidden>No conversations yet.</div>
+          </div>
+        </aside>
+
+        <!-- Main thread -->
+        <section class="main" id="main">
+          <div class="thread-empty" id="threadEmpty">
+            <svg class="icon icon--xl"><use href="/icons.svg#i-inbox" /></svg>
+            <p>Select a conversation to read the full thread.</p>
+          </div>
+
+          <div class="thread-view" id="threadView" hidden>
+            <div class="thread-head">
+              <div class="thread-id">
+                <button class="icon-btn back-btn back-btn--thread" id="threadBackBtn" type="button" title="Back to inbox" aria-label="Back to inbox">
+                  <svg class="icon icon--sm"><use href="/icons.svg#i-arrow-left" /></svg>
+                </button>
+                <span class="avatar-initials" id="threadInitials">?</span>
+                <div class="meta">
+                  <span class="name" id="threadName">—</span>
+                  <span class="sub" id="threadSub">—</span>
+                </div>
+              </div>
+              <div class="thread-actions">
+                <span class="attn-flag" id="attnFlag" hidden>
+                  <svg class="icon"><use href="/icons.svg#i-spark" /></svg> Avatar asked for you
+                </span>
+                <button class="btn btn--secondary btn--sm" id="resolveBtn" type="button">
+                  <svg class="icon icon--sm"><use href="/icons.svg#i-check" /></svg> Mark resolved
+                </button>
+                <button class="btn btn--ghost btn--sm" id="archiveBtn" type="button" title="Archive this whole conversation">
+                  <svg class="icon icon--sm"><use href="/icons.svg#i-archive" /></svg> Archive
+                </button>
+              </div>
+            </div>
+
+            <div class="thread scroll" id="thread">
+              <div class="thread-inner" id="threadInner"></div>
+            </div>
+
+            <!-- Admin composer -->
+            <div class="admin-composer-dock">
+              <div class="admin-composer-wrap">
+                <div class="posting-as">
+                  <span class="avatar avatar-human" style="background-image:url('/avatar-human.png')"></span>
+                  Posting as <strong>you</strong> — the visitor sees this from your photo,
+                  labelled <strong>live</strong>. The Avatar won't reply to it.
+                </div>
+                <div class="composer" id="adminComposer">
+                  <textarea id="adminComposerInput" rows="1" placeholder="Write a message to the visitor…"></textarea>
+                  <button class="btn-send" id="adminSendBtn" type="button" title="Send (Enter)" aria-label="Send">
+                    <svg class="icon"><use href="/icons.svg#i-send" /></svg>
+                  </button>
+                </div>
+                <div class="kbd-hints">
+                  <span class="h">
+                    <span class="kbd"><svg class="icon" style="width:12px;height:12px"><use href="/icons.svg#i-chev-up" /></svg></span><span class="kbd"><svg class="icon" style="width:12px;height:12px"><use href="/icons.svg#i-chev-down" /></svg></span>
+                    move between conversations
+                  </span>
+                  <span class="h"><span class="kbd">Enter</span> send</span>
+                  <span class="h"><span class="kbd">Shift</span>+<span class="kbd">Enter</span> new line</span>
+                </div>
+              </div>
             </div>
           </div>
+        </section>
+      </div>
+    </div>
+
+    <!-- ============================ ARCHIVE ============================= -->
+    <div class="tab-panel" id="panel-archive" hidden>
+      <div class="workspace">
+        <aside class="sidebar">
+          <div class="sidebar-head">
+            <div class="sidebar-title">
+              <h2><svg class="icon"><use href="/icons.svg#i-archive" /></svg> Archive</h2>
+              <span class="count-badge" id="archiveCount">0</span>
+            </div>
+            <div class="search">
+              <svg class="icon icon--sm"><use href="/icons.svg#i-search" /></svg>
+              <input type="text" id="archiveSearchInput" placeholder="Search archived conversations…" autocomplete="off" />
+            </div>
+            <div class="sidebar-tools">
+              <button class="btn btn--ghost btn--sm" id="archiveDownloadBtn" type="button" title="Download all archived conversations as JSONL">
+                <svg class="icon icon--sm"><use href="/icons.svg#i-download" /></svg> Download
+              </button>
+            </div>
+          </div>
+          <div class="convo-list scroll" id="archiveList" role="listbox" aria-label="Archived conversations">
+            <div class="list-empty" id="archiveListEmpty" hidden>No archived conversations.</div>
+          </div>
+        </aside>
+
+        <section class="main" id="archiveMain">
+          <div class="thread-empty" id="archiveThreadEmpty">
+            <svg class="icon icon--xl"><use href="/icons.svg#i-archive" /></svg>
+            <p>Select an archived conversation to read it.</p>
+          </div>
+
+          <div class="thread-view" id="archiveThreadView" hidden>
+            <div class="thread-head">
+              <div class="thread-id">
+                <button class="icon-btn back-btn back-btn--thread" id="archiveBackBtn" type="button" title="Back to archive" aria-label="Back to archive">
+                  <svg class="icon icon--sm"><use href="/icons.svg#i-arrow-left" /></svg>
+                </button>
+                <span class="avatar-initials" id="archiveThreadInitials">?</span>
+                <div class="meta">
+                  <span class="name" id="archiveThreadName">—</span>
+                  <span class="sub" id="archiveThreadSub">—</span>
+                </div>
+              </div>
+              <div class="thread-actions">
+                <span class="archived-flag"><svg class="icon icon--sm"><use href="/icons.svg#i-archive" /></svg> Archived</span>
+                <button class="btn btn--primary btn--sm" id="archiveRestoreBtn" type="button" title="Restore this conversation to the live inbox">
+                  <svg class="icon icon--sm"><use href="/icons.svg#i-reset" /></svg> Restore
+                </button>
+              </div>
+            </div>
+
+            <div class="thread scroll" id="archiveThread">
+              <div class="thread-inner" id="archiveThreadInner"></div>
+            </div>
+          </div>
+        </section>
+      </div>
+    </div>
+
+    <!-- ============================ INSTRUCTIONS ======================== -->
+    <div class="tab-panel panel-scroll" id="panel-instructions" hidden>
+      <div class="editor-wrap">
+        <header class="editor-head">
+          <h2><svg class="icon"><use href="/icons.svg#i-sliders" /></svg> Additional instructions</h2>
+          <p class="editor-sub">
+            Markdown added here is appended to the Avatar's system prompt (after its
+            style and rules), and is read fresh on every reply — so edits take effect
+            immediately. Leave empty for none.
+          </p>
+        </header>
+        <textarea id="instructionsTextarea" class="textarea editor-textarea" spellcheck="true"
+          placeholder="e.g. This week, mention that I'm speaking at the AI Builders meetup on Friday and happy to connect there."></textarea>
+        <div class="editor-actions">
+          <span class="editor-status" id="instructionsStatus" aria-live="polite"></span>
+          <button class="btn btn--primary" id="instructionsSaveBtn" type="button">
+            <svg class="icon icon--sm"><use href="/icons.svg#i-save" /></svg> Save instructions
+          </button>
         </div>
       </div>
-    </section>
+    </div>
+
+    <!-- ============================ FAQ ================================= -->
+    <div class="tab-panel panel-scroll" id="panel-faq" hidden>
+      <div class="editor-wrap editor-wrap--wide">
+        <header class="editor-head">
+          <div class="editor-head-row">
+            <h2><svg class="icon"><use href="/icons.svg#i-tool" /></svg> FAQ <span class="count-badge" id="faqCount">0</span></h2>
+            <button class="btn btn--primary btn--sm" id="faqAddBtn" type="button">
+              <svg class="icon icon--sm"><use href="/icons.svg#i-plus" /></svg> Add question
+            </button>
+          </div>
+          <p class="editor-sub">
+            These power the <code>faq_tool</code>, the <code>Qn</code> instant shortcut and the
+            <code>?q=N</code> deep link. <strong>Concise</strong> is the short routing phrase the model
+            matches on; the question and answer are returned verbatim.
+          </p>
+        </header>
+        <div class="faq-list" id="faqList"></div>
+        <div class="list-empty" id="faqEmpty" hidden>No FAQ entries yet. Add your first question.</div>
+      </div>
+    </div>
+
   </div>
 </div>
+
+<!-- FAQ row editor template (cloned by the admin screen logic). -->
+<template id="faqRowTemplate">
+  <div class="faq-row">
+    <div class="faq-row-head">
+      <span class="faq-id">#</span>
+      <input class="input faq-concise" type="text" placeholder="Concise routing phrase (e.g. pricing cost)" />
+      <div class="faq-row-actions">
+        <button class="btn btn--secondary btn--sm faq-save" type="button" title="Save">
+          <svg class="icon icon--sm"><use href="/icons.svg#i-save" /></svg> Save
+        </button>
+        <button class="btn btn--ghost btn--sm faq-delete" type="button" title="Delete">
+          <svg class="icon icon--sm"><use href="/icons.svg#i-trash" /></svg>
+        </button>
+      </div>
+    </div>
+    <input class="input faq-question" type="text" placeholder="Question" />
+    <textarea class="textarea faq-answer" rows="3" placeholder="Answer (markdown)"></textarea>
+  </div>
+</template>
 
 <script type="module" src="/src/admin/main.ts"></script>
 </body>

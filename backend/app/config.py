@@ -42,6 +42,18 @@ class Settings:
         "OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1"
     )
     MODEL: str = _get("MODEL", "openai/gpt-5.4-nano")
+    # Hard per-reply output ceiling (ModelSettings.max_tokens). A graceful
+    # "kept it brief" note is appended on the rare truncation.
+    MODEL_MAX_TOKENS: int = int(_get("MODEL_MAX_TOKENS", "2000"))
+    # Per-turn transcript budget (characters). The most recent messages within
+    # this budget are sent to the model; older lines are dropped with a note.
+    # The full history is still stored in the database.
+    TRANSCRIPT_CHAR_BUDGET: int = int(_get("TRANSCRIPT_CHAR_BUDGET", "24000"))
+    # Web-fetch MCP server. Command defaults to ``uvx mcp-server-fetch`` locally;
+    # the Docker image pre-installs the tool and sets FETCH_MCP_COMMAND so no
+    # download happens on the first request. Empty FETCH_MCP_COMMAND disables it.
+    FETCH_MCP_COMMAND: str = _get("FETCH_MCP_COMMAND", "uvx")
+    FETCH_MCP_ARGS: str = _get("FETCH_MCP_ARGS", "mcp-server-fetch")
 
     # --- Identity --------------------------------------------------------------
     OWNER_NAME: str = _get("OWNER_NAME", "the owner")
@@ -49,13 +61,16 @@ class Settings:
     # --- Admin auth ------------------------------------------------------------
     ADMIN_PASSWORD: str = _get("ADMIN_PASSWORD")
     # SESSION_SECRET signs the admin session cookie. If unset it derives from the
-    # admin password so the app still works out of the box, but production should
-    # set an explicit value (see README / SPEC setup notes).
+    # admin password. The app refuses to start without ADMIN_PASSWORD (see
+    # ``require_admin_password``), so this default is never the public constant
+    # ``avatar::`` that would otherwise allow cookie forgery.
     SESSION_SECRET: str = _get(
         "SESSION_SECRET", f"avatar::{_get('ADMIN_PASSWORD')}"
     )
     # Cookie is marked Secure only when COOKIE_SECURE == "1" (production HTTPS).
     COOKIE_SECURE: bool = _get("COOKIE_SECURE") == "1"
+    # Failed admin logins are throttled per client IP to blunt online brute force.
+    LOGIN_RATE_LIMIT: str = _get("LOGIN_RATE_LIMIT", "5/minute")
 
     # --- Pushover (optional) ---------------------------------------------------
     PUSHOVER_USER: str = _get("PUSHOVER_USER")
@@ -88,4 +103,23 @@ class Settings:
 
 settings = Settings()
 
-__all__ = ["settings", "Settings", "PROJECT_ROOT"]
+
+def require_admin_password() -> None:
+    """Fail closed: raise unless an admin password is configured.
+
+    Called at application startup. Without ``ADMIN_PASSWORD`` set, the admin
+    surface would accept an empty password AND the session-signing secret would
+    degrade to a public constant, allowing cookie forgery. We refuse to start
+    rather than run insecurely. (Tests and the connectivity check load ``.env``,
+    which sets it.)
+    """
+    if not settings.ADMIN_PASSWORD:
+        raise RuntimeError(
+            "ADMIN_PASSWORD is not set. The Avatar backend refuses to start "
+            "without an admin password (it protects the admin dashboard and "
+            "signs the session cookie). Set ADMIN_PASSWORD in the project-root "
+            ".env and restart."
+        )
+
+
+__all__ = ["settings", "Settings", "PROJECT_ROOT", "require_admin_password"]

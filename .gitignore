@@ -228,3 +228,9 @@ frontend/.playwright/
 
 # Test artifacts (Playwright screenshots are transient — deleted after each run)
 test/screenshots/
+
+# Local DB safety backups (contain real production conversation data — never commit)
+backups/
+
+# Claude Code local config / skills
+.claude/
