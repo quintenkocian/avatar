@@ -21,6 +21,13 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const SCREENSHOT_DIR = resolve(HERE, "..", "..", "test", "screenshots");
 const TRACK_FILE = resolve(SCREENSHOT_DIR, ".e2e-conversations.txt");
 
+/**
+ * Saved admin storage state (cookies) produced once by `auth.setup.ts` and
+ * reused by the authenticated admin specs via `test.use({ storageState })`, so
+ * they don't each log in (which would trip the production 5/min login limit).
+ */
+export const ADMIN_STORAGE = resolve(HERE, ".auth", "admin.json");
+
 function ensureDir(): void {
   try {
     mkdirSync(SCREENSHOT_DIR, { recursive: true });
@@ -80,5 +87,15 @@ export async function adminLogin(page: Page, password: string): Promise<void> {
   await page.locator("#loginGate").waitFor({ state: "visible" });
   await page.locator("#passwordInput").fill(password);
   await page.locator("#loginBtn").click();
+  await page.locator("#dashboard").waitFor({ state: "visible" });
+}
+
+/**
+ * Open the admin dashboard when an authenticated storage state is already in
+ * effect (see `ADMIN_STORAGE`): navigate straight to `/admin` and wait for the
+ * dashboard — no login round-trip.
+ */
+export async function openAdmin(page: Page): Promise<void> {
+  await page.goto("/admin");
   await page.locator("#dashboard").waitFor({ state: "visible" });
 }

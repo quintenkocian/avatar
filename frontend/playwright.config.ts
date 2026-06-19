@@ -41,15 +41,30 @@ export default defineConfig({
     actionTimeout: 15_000,
     trace: "off",
     screenshot: "off",
+    // Drive a system Chromium when PW_EXECUTABLE_PATH is set (e.g. the snap
+    // Chromium on OS/arch combos Playwright has no prebuilt browser for).
+    // Inert otherwise — the bundled browser is used.
+    launchOptions: {
+      executablePath: process.env.PW_EXECUTABLE_PATH || undefined,
+      args: process.env.PW_EXECUTABLE_PATH
+        ? ["--no-sandbox", "--disable-dev-shm-usage"]
+        : [],
+    },
   },
   projects: [
+    // Runs first: logs in once and saves the admin storage state (see
+    // auth.setup.ts). The default testMatch (*.spec.ts) ignores *.setup.ts, so
+    // only this project runs it.
+    { name: "setup", testMatch: /auth\.setup\.ts/ },
     {
       name: "desktop",
       use: { ...devices["Desktop Chrome"], viewport: { width: 1280, height: 860 } },
+      dependencies: ["setup"],
     },
     {
       name: "mobile",
       use: { ...devices["Pixel 5"] },
+      dependencies: ["setup"],
     },
   ],
 });

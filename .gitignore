@@ -229,6 +229,9 @@ frontend/.playwright/
 # Test artifacts (Playwright screenshots are transient — deleted after each run)
 test/screenshots/
 
+# Saved admin session for e2e (auth.setup.ts) — regenerated each run, never commit
+frontend/e2e/.auth/
+
 # Local DB safety backups (contain real production conversation data — never commit)
 backups/
 

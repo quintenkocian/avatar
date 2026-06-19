@@ -26,18 +26,46 @@ uv run pytest -m llm -q                                 # live model + Supabase
 cd backend && uv run python ../scripts/seed_faq.py
 uv run --with pillow python scripts/generate_og.py
 
-# Frontend
+# Frontend e2e — the suite drives a real browser against a running backend.
 cd frontend
 npx tsc --noEmit && npx vite build                      # typecheck + production build
-npx playwright test                                     # e2e (needs a Playwright browser)
+# Start the backend serving the built dist (separate shell), then:
+#   cd backend && uv run uvicorn app.main:app --host 127.0.0.1 --port 8000 --app-dir .
+mkdir -p "$HOME/pw-tmp"                                  # snap-confinement-safe TMPDIR
+TMPDIR="$HOME/pw-tmp" PW_EXECUTABLE_PATH=/snap/bin/chromium npx playwright test
 cd backend && uv run python ../test/cleanup_e2e.py      # sweep e2e conversations (both tables)
 ```
+
+On a host where Playwright ships its own browser, drop the `PW_EXECUTABLE_PATH` /
+`TMPDIR` prefix and just run `npx playwright test`.
 
 > **Environment note.** This machine is `ubuntu26.04-arm64`, for which Playwright
 > ships no browser build, so the browser-driven checks below were executed via
 > Windows Chromium (screenshots) and the API checks via `curl`/Python against the
 > running Docker container. The `frontend/e2e/more.spec.ts` specs encode the same
-> flows for any environment that has a Playwright browser.
+> flows for any environment that has a Playwright browser. (The suite has since
+> been run **green here** against a **snap** Chromium — `sudo snap install chromium`,
+> with `playwright.config.ts` driving it via `PW_EXECUTABLE_PATH` + `--no-sandbox`
+> and `TMPDIR` pointed at a non-hidden home dir for snap confinement — until
+> Playwright ships a native `ubuntu26.04-arm64` build. Result: **42 passed, 7
+> skipped** at the production `5/min` admin-login limit.)
+
+> **Admin login rate-limit in e2e.** The admin specs reuse a single saved session
+> (`auth.setup.ts` writes a storageState that the authenticated specs load via
+> `test.use({ storageState })`), and the few real login/logout-flow tests run on
+> the desktop project only. That keeps total logins per run (≈4) under the
+> production `5/min` limit, so the limit is exercised as-is rather than relaxed
+> for tests.
+
+> **Future option — full e2e harness.** Today the suite assumes the backend is
+> already running at `http://127.0.0.1:8000`, so a run is three manual steps
+> (start uvicorn → `npx playwright test` → stop it). A later hardening step could
+> add a Playwright `webServer` block to `playwright.config.ts` that auto-boots the
+> backend (with the built `dist`, `MODEL=…-nano`, and the test login-rate-limit
+> handling baked in), waits for `/healthz`, and tears it down — fronted by an
+> `npm run test:e2e` script so the whole flow is one command. Worth doing if/when
+> the suite runs in CI or is run by someone other than the maintainer; skip it for
+> ad-hoc local runs.
 
 ## Archive functionality
 
