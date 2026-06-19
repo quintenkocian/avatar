@@ -31,6 +31,8 @@ COOKIE_SECURE=0
 
 `SESSION_SECRET` signs the admin session cookie. It is optional locally - if unset, it is derived from `ADMIN_PASSWORD` - but set it to a long random value (e.g. run `openssl rand -hex 32`) so that changing your admin password later does not invalidate live admin sessions. `COOKIE_SECURE` gates whether that cookie requires HTTPS: leave it `0` (or unset) for local http; it is set to `1` automatically in production (see [Deploy to fly.io](#deploy-to-flyio)).
 
+`PUBLIC_BASE_URL` is optional. It is the public origin (e.g. `https://avatar.example.com`) used to build the absolute `og:image`/`og:url` tags on the visitor page. Leave it unset and the app derives the origin from each request (correct for both your `*.fly.dev` host and a custom domain); set it only if you want the social card to always point at a specific canonical domain.
+
 ### OpenRouter
 
 The Avatar's LLM calls go through [OpenRouter](https://openrouter.ai). If you already have a key in `.env`, skip this.
@@ -274,6 +276,6 @@ All tests must pass. If `archive`, `settings`, or `faq` is missing you'll get a 
 
 - **Web-fetch tool** — when a visitor pastes a link to a **job description**, the Avatar fetches it (via the `mcp-server-fetch` MCP server, pre-installed in the image) and assesses fit. It is scoped to job postings only, not general browsing. Its use shows in the chat alongside the FAQ and push tools.
 - **`?m=` deep link** — `…/?m=whats+the+price+of+sliced+bread` opens the chat and submits that text automatically (free-text counterpart to `?q=N`; if both are present, `?q` wins).
-- **OG social image** — `og-avatar.png` (1200×630) in the project root is a ready-to-upload Open Graph card for sharing the link on LinkedIn etc. Regenerate it for your own owner with `uv run --with pillow python scripts/generate_og.py`.
+- **OG social image** — `frontend/public/og-avatar.png` (1200×630) is an Open Graph card for sharing the link on LinkedIn etc. The build bundles it and the app serves it at `/og-avatar.png`; the visitor page carries `og:image`/`twitter:image` meta tags, and `serve_index` rewrites them to absolute URLs at request time (scrapers require absolute URLs), deriving the origin from the request host or the optional `PUBLIC_BASE_URL` env var. Regenerate it for your own owner with `uv run --with pillow python scripts/generate_og.py`. If you instead share your **WordPress** page (the iframe host), set the card there too, since the host page owns its own meta tags.
 - **Visitor polling** backs off through tiers (10s → 30s after 2 min → 2 min after 10 min → 5 min after 1 hr of quiet) to reduce idle server load.
 

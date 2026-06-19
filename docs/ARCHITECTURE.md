@@ -55,6 +55,7 @@ frontend/
     avatar-human.png          # copied from design-system/assets/
     avatar-robot.png
     avatar-robot-round.png
+    og-avatar.png             # 1200x630 OG card; bundled & served at /og-avatar.png
     favicon (optional)
   src/
     styles/
@@ -71,12 +72,11 @@ frontend/
   e2e/                 # Playwright specs: visitor / admin / three-way / more
 Dockerfile             # multi-stage: node build frontend -> python run backend
 .dockerignore
-og-avatar.png          # standalone 1200x630 OG card (root; NOT served by the app)
 scripts/
   start_pc.ps1  stop_pc.ps1  start_mac.sh  stop_mac.sh
   deploy.sh  fly.toml  wordpress-embed.html
   seed_faq.py          # upsert knowledge/faq.jsonl -> Supabase faq table (idempotent)
-  generate_og.py       # build og-avatar.png from avatar assets + OWNER_NAME
+  generate_og.py       # build frontend/public/og-avatar.png from avatar assets + OWNER_NAME
 test/
   backend-test-plan.md       # checkbox plan
   frontend-test-plan.md
@@ -363,8 +363,10 @@ All JSON unless noted. `conversation_id` is a client-minted UUID string.
   `PUT /admin/faq/{id}` → `{"faq":<row>}` (404 if absent); `DELETE /admin/faq/{id}` → `{"ok":true}`.
 
 ### Static serving
-- Mount built frontend. `GET /` → `STATIC_DIR/index.html`; `GET /admin` → `STATIC_DIR/admin.html`.
-  Serve `/assets/*`, `/icons.svg`, `/*.png` from `STATIC_DIR`. Use `StaticFiles` for assets and
+- Mount built frontend. `GET /` → `STATIC_DIR/index.html` (rewriting the page's root-relative
+  `og:image`/`twitter:image`/`og:url` to absolute URLs from the request host or `PUBLIC_BASE_URL`,
+  since social scrapers require absolute Open Graph URLs); `GET /admin` → `STATIC_DIR/admin.html`.
+  Serve `/assets/*`, `/icons.svg`, `/*.png` (incl. `/og-avatar.png`) from `STATIC_DIR`. Use `StaticFiles` for assets and
   explicit `FileResponse` routes for `/` and `/admin` so they win over the SPA mount. Guard for the
   case where `STATIC_DIR` doesn't exist yet (dev) — return a friendly placeholder, don't crash.
 - CORS: not needed in container (same origin). In dev, Vite proxies `/api` and `/admin` to :8000,
@@ -456,7 +458,8 @@ Both `index.html` and `admin.html` set `data-theme` early (inline script reading
     backend dependency, so `uv sync` pre-installs it into `/app/.venv/bin` (on PATH) — no runtime
     download for the fetch tool. CMD: `uv run uvicorn app.main:app --host 0.0.0.0 --port ${PORT} --app-dir .`.
   - `.dockerignore`: `.env`, `**/.venv`, `node_modules`, `dist`, `__pycache__`, screenshots, `.git`,
-    plus `backups/` and `og-avatar.png` (local-only artifacts) and `MORE.md`.
+    plus `backups/` (local-only artifact) and `MORE.md`. (`og-avatar.png` now lives in
+    `frontend/public/` so the build bundles and serves it.)
 - **scripts/start_pc.ps1 / stop_pc.ps1**: stop+rm `avatar` container if running, `docker build -t avatar .`,
   `docker run -d --name avatar --env-file .env -p 8000:8000 avatar`. start scripts rebuild every time.
 - **scripts/start_mac.sh / stop_mac.sh**: bash equivalents. All four scripts take `.env` from repo root.

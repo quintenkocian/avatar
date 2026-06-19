@@ -54,3 +54,73 @@ def test_favicon(client):
     resp = client.get("/favicon.ico")
     # Either a real favicon file (200) or a friendly 204 no-content.
     assert resp.status_code in (200, 204)
+
+
+# --- Open Graph card -----------------------------------------------------------
+
+_RELATIVE_OG_INDEX = (
+    "<!DOCTYPE html><html><head>"
+    '<meta property="og:url" content="/" />'
+    '<meta property="og:image" content="/og-avatar.png" />'
+    '<meta name="twitter:image" content="/og-avatar.png" />'
+    "</head><body>hi</body></html>"
+)
+
+
+def test_public_base_url_prefers_setting(monkeypatch):
+    monkeypatch.setattr(settings, "PUBLIC_BASE_URL", "https://avatar.example.com/")
+
+    class _Req:
+        headers: dict[str, str] = {}
+
+        class url:
+            scheme = "http"
+            netloc = "ignored"
+
+    # The explicit setting wins and the trailing slash is trimmed.
+    assert main._public_base_url(_Req()) == "https://avatar.example.com"
+
+
+def test_public_base_url_honours_forwarded_headers(monkeypatch):
+    monkeypatch.setattr(settings, "PUBLIC_BASE_URL", "")
+
+    class _Req:
+        headers = {
+            "x-forwarded-proto": "https",
+            "x-forwarded-host": "avatar.example.com",
+        }
+
+        class url:
+            scheme = "http"
+            netloc = "internal:8080"
+
+    assert main._public_base_url(_Req()) == "https://avatar.example.com"
+
+
+def test_serve_index_rewrites_og_to_absolute(client, monkeypatch, tmp_path):
+    (tmp_path / "index.html").write_text(_RELATIVE_OG_INDEX, encoding="utf-8")
+    monkeypatch.setattr(settings, "STATIC_DIR", tmp_path)
+    monkeypatch.setattr(settings, "PUBLIC_BASE_URL", "")
+
+    resp = client.get(
+        "/",
+        headers={
+            "x-forwarded-proto": "https",
+            "x-forwarded-host": "avatar.example.com",
+        },
+    )
+    assert resp.status_code == 200
+    assert (
+        '<meta property="og:image" '
+        'content="https://avatar.example.com/og-avatar.png" />' in resp.text
+    )
+    assert (
+        '<meta name="twitter:image" '
+        'content="https://avatar.example.com/og-avatar.png" />' in resp.text
+    )
+    assert (
+        '<meta property="og:url" content="https://avatar.example.com/" />'
+        in resp.text
+    )
+    # No root-relative remnants once rewritten.
+    assert 'content="/og-avatar.png"' not in resp.text

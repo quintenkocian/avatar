@@ -589,13 +589,51 @@ def _static_file(name: str) -> Path | None:
     return None
 
 
+def _public_base_url(request: Request) -> str:
+    """Absolute origin (scheme + host, no trailing slash) for this deployment.
+
+    Prefers the explicit ``PUBLIC_BASE_URL`` setting; otherwise derives it from
+    the request, honouring ``X-Forwarded-Proto`` / ``X-Forwarded-Host`` so the
+    result is ``https://...`` behind Fly's TLS-terminating proxy rather than the
+    internal ``http`` uvicorn sees.
+    """
+    if settings.PUBLIC_BASE_URL:
+        return settings.PUBLIC_BASE_URL.rstrip("/")
+    proto = (
+        request.headers.get("x-forwarded-proto", "").split(",")[0].strip()
+        or request.url.scheme
+    )
+    host = (
+        request.headers.get("x-forwarded-host", "").split(",")[0].strip()
+        or request.url.netloc
+    )
+    return f"{proto}://{host}"
+
+
 @app.get("/", response_class=HTMLResponse)
-async def serve_index() -> Response:
-    """Serve the visitor page (or a friendly placeholder if not built)."""
+async def serve_index(request: Request) -> Response:
+    """Serve the visitor page (or a friendly placeholder if not built).
+
+    The page's ``og:image`` / ``og:url`` tags are authored root-relative in
+    ``index.html``; here we rewrite them to absolute URLs because social
+    scrapers (LinkedIn, Slack, etc.) require absolute Open Graph URLs.
+    """
     path = _static_file("index.html")
-    if path is not None:
-        return FileResponse(path)
-    return HTMLResponse(_PLACEHOLDER)
+    if path is None:
+        return HTMLResponse(_PLACEHOLDER)
+    html = path.read_text(encoding="utf-8")
+    base = _public_base_url(request)
+    html = html.replace(
+        '<meta property="og:image" content="/og-avatar.png" />',
+        f'<meta property="og:image" content="{base}/og-avatar.png" />',
+    ).replace(
+        '<meta name="twitter:image" content="/og-avatar.png" />',
+        f'<meta name="twitter:image" content="{base}/og-avatar.png" />',
+    ).replace(
+        '<meta property="og:url" content="/" />',
+        f'<meta property="og:url" content="{base}/" />',
+    )
+    return HTMLResponse(html)
 
 
 @app.get("/admin", response_class=HTMLResponse)
