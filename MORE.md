@@ -92,7 +92,7 @@ Clarifications agreed before starting work (decisions for the items above):
 
 10. **Web Fetch MCP** uses the reference pattern: `MCPServerStdio` running `mcp-server-fetch`, entered per chat turn, with the modified INSTRUCTIONS merged into the system prompt. `mcp-server-fetch` is pre-installed in the Dockerfile so the first request doesn't pay a download. Model stays `settings.model` (gpt-5.4-mini is available locally). Fetch tool-use is shown in the UI alongside the FAQ and push tools.
 
-11. **OG image** is a standalone 1200x630 PNG `og-avatar.png` saved in the project root, derived from the avatar assets. It is not served by the app and no `og:image` meta tags are added (the owner uploads it to the WordPress site).
+11. **OG image** is a 1200x630 PNG derived from the avatar assets, generated to `frontend/public/og-avatar.png`. (Originally a standalone root file the owner uploaded to WordPress; later changed so the app serves it.) The build bundles it and it is served at `/og-avatar.png`; the visitor page carries `og:image`/`twitter:image` meta tags, and `serve_index` rewrites them to absolute URLs at request time (scrapers require absolute URLs), deriving the origin from the request host or the optional `PUBLIC_BASE_URL` env var. If the link is shared as the WordPress host page instead, set the OG card there too, since that page owns its own meta tags.
 
 12. **Polling** - the new 4-tier ladder (10s / 30s after 2min / 2min after 10min / 5min after 1hr) fully replaces the old 10s/60s scheme; "idle" resets on received human messages as well as on sends.
 

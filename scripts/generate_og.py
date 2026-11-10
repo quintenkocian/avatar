@@ -3,14 +3,16 @@
 The card is what LinkedIn / Slack / etc. render when the Avatar link is shared.
 It is derived from the brand palette (SPEC.md) and the synthetic twin avatar in
 ``frontend/public/avatar-robot.png``, and is owner-aware: the headline uses
-``OWNER_NAME`` from ``.env``. It is a standalone asset (not served by the app);
-the owner uploads it to their site (per MORE.md #11).
+``OWNER_NAME`` from ``.env``. It is written into ``frontend/public/`` so the
+build bundles it and the app serves it at ``/og-avatar.png``; the visitor page
+references it via ``og:image`` meta tags (see ``frontend/index.html`` and the
+``serve_index`` handler, which rewrites the URL to absolute at request time).
 
 Run with ephemeral deps (no project deps touched):
 
   uv run --with pillow python scripts/generate_og.py
 
-Output: ``og-avatar.png`` in the project root.
+Output: ``frontend/public/og-avatar.png`` (1200x630).
 """
 
 from __future__ import annotations
@@ -150,7 +152,7 @@ def main() -> None:
         draw.text((text_x, ys), line, font=s_font, fill=MUTED)
         ys += int(s_font.size * 1.35)
 
-    out = REPO / "og-avatar.png"
+    out = REPO / "frontend" / "public" / "og-avatar.png"
     img.save(out, "PNG")
     print(f"Wrote {out} ({W}x{H})")
 

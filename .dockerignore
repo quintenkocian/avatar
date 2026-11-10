@@ -52,6 +52,6 @@ CLAUDE.md
 MORE.md
 LICENSE
 
-# Local-only artifacts (DB backups, the standalone OG card)
+# Local-only artifacts (DB backups)
+# (og-avatar.png now lives in frontend/public/ so the build bundles & serves it)
 backups
-og-avatar.png

@@ -2,9 +2,10 @@ import { test, expect } from "@playwright/test";
 import type { Browser } from "@playwright/test";
 import {
   ADMIN_PASSWORD,
+  ADMIN_STORAGE,
   OWNER_NAME,
-  adminLogin,
   newConversationId,
+  openAdmin,
   seedConversationCookie,
   shot,
 } from "./fixtures";
@@ -33,9 +34,9 @@ test.describe("Three-way conversation", () => {
     await expect(visitor.locator(".msg--avatar .instant-tag").last()).toBeVisible();
 
     // --- Owner opens the same thread in admin and posts a live reply. ---
-    const adminCtx = await browser.newContext();
+    const adminCtx = await browser.newContext({ storageState: ADMIN_STORAGE });
     const admin = await adminCtx.newPage();
-    await adminLogin(admin, ADMIN_PASSWORD);
+    await openAdmin(admin);
     await admin.locator("#searchInput").fill(name);
     await admin.locator(`.convo-item[data-id="${cid}"]`).click();
     await expect(admin.locator("#threadView")).toBeVisible();
@@ -71,9 +72,9 @@ test.describe("Three-way conversation", () => {
     await expect(b.page.locator(".thread-messages")).not.toContainText(a.name);
 
     // Admin inbox shows both distinct conversations.
-    const adminCtx = await browser.newContext();
+    const adminCtx = await browser.newContext({ storageState: ADMIN_STORAGE });
     const admin = await adminCtx.newPage();
-    await adminLogin(admin, ADMIN_PASSWORD);
+    await openAdmin(admin);
     await expect(admin.locator(`.convo-item[data-id="${a.cid}"]`)).toBeVisible();
     await expect(admin.locator(`.convo-item[data-id="${b.cid}"]`)).toBeVisible();
 

@@ -1,17 +1,24 @@
 import { test, expect } from "@playwright/test";
 import {
   ADMIN_PASSWORD,
+  ADMIN_STORAGE,
   OWNER_NAME,
   adminLogin,
   newConversationId,
+  openAdmin,
   seedTheme,
   shot,
 } from "./fixtures";
 
 // The admin dashboard: auth gate, inbox, thread open (mark read), composing a
 // human message, logout, and the mobile master/detail flow.
+//
+// Split into two groups: the "auth flow" group exercises real login/logout (so
+// it runs with a clean, unauthenticated context); the "authenticated" group
+// reuses a single saved session (see auth.setup.ts / ADMIN_STORAGE) so it never
+// re-logs-in, keeping the suite under the production 5/min login rate-limit.
 
-test.describe("Admin dashboard", () => {
+test.describe("Admin dashboard — auth flow", () => {
   test.skip(!ADMIN_PASSWORD, "ADMIN_PASSWORD not available from .env");
 
   test("login gate renders (dark + light)", async ({ page }, info) => {
@@ -33,7 +40,8 @@ test.describe("Admin dashboard", () => {
     await page.screenshot({ path: shot(`admin-login-light-${info.project.name}`), fullPage: true });
   });
 
-  test("wrong password shows an error and stays gated", async ({ page }) => {
+  test("wrong password shows an error and stays gated", async ({ page }, info) => {
+    test.skip(info.project.name !== "desktop", "login flow is viewport-independent; covered on desktop");
     await page.goto("/admin");
     await page.locator("#passwordInput").fill("definitely-not-the-password");
     await page.locator("#loginBtn").click();
@@ -43,11 +51,25 @@ test.describe("Admin dashboard", () => {
   });
 
   test("correct password opens the dashboard", async ({ page }, info) => {
+    test.skip(info.project.name !== "desktop", "login flow is viewport-independent; covered on desktop");
     await adminLogin(page, ADMIN_PASSWORD);
     await expect(page.locator(".appbar .brand-name")).toHaveText("Avatar");
     await expect(page.locator("#ownerLabel")).toContainText(OWNER_NAME.split(" ")[0]);
     await page.screenshot({ path: shot(`admin-dashboard-${info.project.name}`), fullPage: true });
   });
+
+  test("logout returns to the gate", async ({ page }, info) => {
+    test.skip(info.project.name !== "desktop", "login flow is viewport-independent; covered on desktop");
+    await adminLogin(page, ADMIN_PASSWORD);
+    await page.locator("#logoutBtn").click();
+    await expect(page.locator("#loginGate")).toBeVisible();
+    await expect(page.locator("#dashboard")).toBeHidden();
+  });
+});
+
+test.describe("Admin dashboard — authenticated", () => {
+  test.skip(!ADMIN_PASSWORD, "ADMIN_PASSWORD not available from .env");
+  test.use({ storageState: ADMIN_STORAGE });
 
   test("inbox lists a seeded conversation and opens its thread", async ({ page, request }, info) => {
     // Seed a conversation through the public API so it appears in the inbox.
@@ -58,7 +80,7 @@ test.describe("Admin dashboard", () => {
     });
     expect(res.ok()).toBeTruthy();
 
-    await adminLogin(page, ADMIN_PASSWORD);
+    await openAdmin(page);
     // Find it via search (the inbox may hold many conversations).
     await page.locator("#searchInput").fill(name);
     const row = page.locator(`.convo-item[data-id="${cid}"]`);
@@ -81,7 +103,7 @@ test.describe("Admin dashboard", () => {
       data: { conversation_id: cid, name, message: "Q1" },
     });
 
-    await adminLogin(page, ADMIN_PASSWORD);
+    await openAdmin(page);
     await page.locator("#searchInput").fill(name);
     await page.locator(`.convo-item[data-id="${cid}"]`).click();
     await expect(page.locator("#threadView")).toBeVisible();
@@ -98,13 +120,6 @@ test.describe("Admin dashboard", () => {
     await page.screenshot({ path: shot(`admin-human-reply-${info.project.name}`), fullPage: true });
   });
 
-  test("logout returns to the gate", async ({ page }) => {
-    await adminLogin(page, ADMIN_PASSWORD);
-    await page.locator("#logoutBtn").click();
-    await expect(page.locator("#loginGate")).toBeVisible();
-    await expect(page.locator("#dashboard")).toBeHidden();
-  });
-
   test("mobile master/detail flips to the thread and back", async ({ page, request }, info) => {
     test.skip(info.project.name !== "mobile", "mobile-only flow");
     const cid = newConversationId();
@@ -113,7 +128,7 @@ test.describe("Admin dashboard", () => {
       data: { conversation_id: cid, name, message: "Q1" },
     });
 
-    await adminLogin(page, ADMIN_PASSWORD);
+    await openAdmin(page);
     await page.locator("#searchInput").fill(name);
     await page.locator(`.convo-item[data-id="${cid}"]`).click();
     // Detail view is shown (dashboard gains .show-detail on mobile).

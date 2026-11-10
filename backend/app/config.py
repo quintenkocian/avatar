@@ -58,6 +58,12 @@ class Settings:
     # --- Identity --------------------------------------------------------------
     OWNER_NAME: str = _get("OWNER_NAME", "the owner")
 
+    # Optional explicit public base URL (e.g. "https://avatar.example.com") used
+    # to build absolute og:image / og:url tags on the visitor page. When unset,
+    # the base is derived per-request from the Host / X-Forwarded-Proto headers,
+    # which is correct for both the *.fly.dev host and a custom domain.
+    PUBLIC_BASE_URL: str = _get("PUBLIC_BASE_URL")
+
     # --- Admin auth ------------------------------------------------------------
     ADMIN_PASSWORD: str = _get("ADMIN_PASSWORD")
     # SESSION_SECRET signs the admin session cookie. If unset it derives from the
