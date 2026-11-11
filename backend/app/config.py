@@ -22,8 +22,15 @@ load_dotenv(PROJECT_ROOT / ".env", override=True)
 
 
 def _get(name: str, default: str = "") -> str:
-    """Return an environment variable, treating an empty string as unset."""
+    """Return an environment variable, trimmed, treating an empty string as unset.
+
+    Trimming guards against values copied from a CRLF ``.env`` into deployment
+    secrets: a trailing ``\\r`` in an API key makes the Authorization header
+    illegal and every LLM / Pushover call fails.
+    """
     value = os.getenv(name)
+    if value is not None:
+        value = value.strip()
     if value is None or value == "":
         return default
     return value

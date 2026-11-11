@@ -23,6 +23,7 @@ KEYS="OPENROUTER_API_KEY MODEL OWNER_NAME ADMIN_PASSWORD PUSHOVER_USER PUSHOVER_
 args=()
 for k in $KEYS; do
   v=$(grep -E "^${k}=" .env | head -1 | cut -d= -f2-)
+  v="${v%$'\r'}"   # tolerate a CRLF .env (edited on Windows): a stray \r breaks HTTP headers
   v="${v%\"}"; v="${v#\"}"; v="${v%\'}"; v="${v#\'}"
   [ -n "$v" ] && args+=("${k}=${v}")
 done
