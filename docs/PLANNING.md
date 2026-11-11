@@ -26,7 +26,8 @@ shortcuts into real architectural limits.
 5. [Agent memory model & unbounded transcript growth](#5-agent-memory--unbounded-transcript)
 6. [The inbox full‑table scan](#6-the-inbox-full-table-scan)
 7. [Multi‑tenancy (career agents for many owners)](#7-multi-tenancy)
-8. [Prioritized roadmap](#8-prioritized-roadmap)
+8. [Permanent deletion of archived conversations](#8-permanent-deletion-of-archived-conversations)
+9. [Prioritized roadmap](#9-prioritized-roadmap)
 
 ---
 
@@ -260,7 +261,44 @@ onboarding/billing (rest of 7e). Isolation is the non‑negotiable first step
 
 ---
 
-## 8. Prioritized roadmap
+## 8. Permanent deletion of archived conversations
+
+**Issue.** The admin has no way to permanently delete a conversation. The
+**Archive** feature (MORE.md) moves a whole thread from `messages` to `archive`,
+and **Restore** moves it back, but the rows always stay in Supabase. The only
+delete path is `db.delete_conversation()` (`backend/app/db.py`), a test cleanup
+helper that no route calls. Removing spam, abusive, or test threads, or acting
+on a visitor's request to erase their data, currently means running SQL or a
+script by hand.
+
+**Proposal: delete from the archive only.** Add a **Delete permanently** action
+to the Archive tab (not the live inbox), so a thread must be archived before it
+can be destroyed. That gives a two-step safety net against accidental loss.
+
+- **Backend:** `DELETE /admin/archive/{conversation_id}`, guarded by the admin
+  session like every other `/admin/*` route. It calls
+  `db.delete_conversation(cid, table=ARCHIVE_TABLE)` and returns the number of rows
+  deleted (404 when the id is not in the archive). It never touches `messages`.
+- **Frontend:** a button in the archived-thread view with a confirmation
+  dialog that names the visitor and says the action cannot be undone. On
+  success, the thread drops out of the archive list and the archive count
+  updates.
+- **Optional:** "Delete all archived older than N days" as a bulk
+  retention action, mirroring the 72h bulk archive.
+- **Tests:** unit tests for the route (401 when logged out, 404 for an unknown
+  id, deletes only archive rows), plus an e2e flow of archive, delete, and gone
+  from both lists. Only self-created throwaway conversations, since the single
+  Supabase DB is production.
+
+**Architectural impact.** None. It reuses the existing table, helper, and auth.
+Consider recommending a **Download** of the archive before bulk deletes, because
+there is no soft-delete or undo.
+
+**Effort:** **XS** (single delete) / **S** (with bulk retention).
+
+---
+
+## 9. Prioritized roadmap
 
 Ordered by value‑for‑effort, independent of the multi‑tenant decision unless noted.
 
@@ -271,11 +309,12 @@ Ordered by value‑for‑effort, independent of the multi‑tenant decision unle
 | 3 | §5d provider prompt caching | Cheap token‑cost win as conversations lengthen | **S** |
 | 4 | §4b Redis rate‑limit store | Prerequisite for any horizontal scale | **S** |
 | 5 | §5b/5c transcript window/summary | When conversations get long | **XS–M** |
+| 6 | §8 permanent delete from archive | Lets the admin remove spam/test threads and honour erasure requests without hand-run SQL | **XS–S** |
 | **Multi‑tenant track (only if exposing to other owners)** | | | |
-| 6 | §7a tenant key + RLS | Foundational; security + isolation | **L** |
-| 7 | §7c per‑owner LLM keys & quotas | Cost attribution + isolation | **M** |
-| 8 | §7b per‑owner config as data | Removes single‑owner globals | **L** |
-| 9 | §7e onboarding/billing/asset pipeline | Turns it into a product | **XXL** |
+| 7 | §7a tenant key + RLS | Foundational; security + isolation | **L** |
+| 8 | §7c per‑owner LLM keys & quotas | Cost attribution + isolation | **M** |
+| 9 | §7b per‑owner config as data | Removes single‑owner globals | **L** |
+| 10 | §7e onboarding/billing/asset pipeline | Turns it into a product | **XXL** |
 
 ### Cross‑cutting notes
 
